@@ -149,22 +149,23 @@
                                 </thead>
                                 <tbody>
                                     @forelse ($getMutasi as $item)
-                                        <tr style="background: #1b84ff;">
+                                        {{-- <tr style="background: #1b84ff;"> --}}
+                                        <tr class="bg-gray-500">
                                             <td style="vertical-align: middle" colspan="5">
                                                 {{-- <b class="text-white">
                                                     Kode Mutasi - {{ $item->kd_mutasi }}
                                                 </b> --}}
                                                 {{-- kode mutasi pada sisi kiri, dan button edit pada sisi kanan --}}
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="text-white fw-bold fs-5">
+                                                    <span class="text-dark fw-bold fs-5">
                                                         Kode Mutasi - {{ $item->kd_mutasi }}
                                                     </span>
                                                     <a
-                                                        href="{{ route('admin.mutasi-on-process.index') }}"
-                                                        class="btn btn-success btn-sm btn-active-light-succes me-2 mb-2"
+                                                        href="{{ route('admin.mutasi.edit-mutasi-nota-on-process', $item->kd_mutasi) }}"
+                                                        class="btn btn-light-dark btn-sm btn-active-light-succes me-2 mb-2"
                                                     >
                                                         <i class="ki-duotone ki-notepad-edit fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                        Edit
+                                                        Edit Mutasi Nota
                                                     </a>
                                                 </div>
                                             </td>
@@ -281,7 +282,20 @@
                                                         class="btn btn-primary btn-sm d-block mb-2"
                                                     >
                                                         <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                        Cetak Nota
+                                                        Cetak Draft Nota
+                                                    </a>
+                                                    <!--lihat log-->
+                                                    <a
+                                                        href="javascript:void(0)"
+                                                        class="btn btn-secondary btn-sm d-block mb-2"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#kt_modal_log"
+                                                        data-id="{{ $data->kd_mutasi }}"
+                                                        data-karyawan="{{ $data->kd_karyawan }}"
+                                                        id="log"
+                                                    >
+                                                    <i class="ki-duotone ki-timer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                                                        Lihat Log
                                                     </a>
                                                 </td>
                                             </tr>
@@ -416,6 +430,31 @@
         </div>
     </div>
     <!--end::Modal - Finalisasi TTE-->
+
+    <!-- Modal Log -->
+    <div class="modal fade" id="kt_modal_log" tabindex="-1" aria-hidden="true" data-bs-focus="false" data-bs-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-dialog-scrollable mw-800px">
+            <div class="modal-content">
+                <div class="modal-header" id="kt_modal_log_header">
+                    <h2 class="fw-bold">Log Mutasi</h2>
+                    <div class="btn btn-icon btn-sm btn-active-icon-primary" data-kt-menu-modal-log="close" data-bs-dismiss="modal">
+                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
+                    </div>
+                </div>
+                <div class="modal-body p-10 mb-7" id="rincian-log">
+                    <div class="timeline timeline-border-dashed" id="logTimeline">
+                        <!-- Timeline items will be dynamically inserted here -->
+                    </div>
+                </div>
+                <div class="modal-footer text-end">
+                    <button type="reset" class="btn btn-light me-3" data-kt-menu-modal-log="cancel" data-bs-dismiss="modal">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--end::Modal - Log-->
 @endsection
 
 @push('scripts')
@@ -520,6 +559,45 @@
                     input.attr('type', 'password');
                     icon.toggleClass('d-none');
                 }
+            });
+
+            // open modal log
+            // function openLogModal(htmlContent) {
+            //     const logTimeLine = $('#logTimeline');
+            //     logTimeLine.html(htmlContent);
+
+            //     $('#kt_modal_log').modal('show');
+            // }
+
+            // handle log button click
+            $(document).on('click', '#log', function () {
+                var id = $(this).data('id');
+                var karyawan = $(this).data('karyawan');
+
+                $.ajax({
+                    url: '{{ route("admin.mutasi-on-process.get-log-mutasi") }}',
+                    method: 'GET',
+                    data: {
+                        kd_mutasi: id,
+                        kd_karyawan: karyawan
+                    },
+                    beforeSend: function() {
+                        $('#rincian-log').html('<div class="text-center"><span class="spinner-border spinner-border-lg align-center"></span></div>');
+                    },
+                    success: function(response) {
+                        $('#rincian-log').html(response);
+                        $('#kt_modal_log').modal('show');
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 419) {
+                            refreshCsrfToken().done(function () {
+                                toastr.error('Token CSRF kadaluarsa, silahkan tekan tombol simpan kembali', 'Token CSRF Kadaluarsa');
+                            })
+                        } else if (xhr.status === 500) {
+                            toastr.error('Internal Server Error', xhr.statusText);
+                        }
+                    }
+                });
             });
         });
 

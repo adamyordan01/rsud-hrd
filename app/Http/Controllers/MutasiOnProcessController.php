@@ -572,5 +572,88 @@ class MutasiOnProcessController extends Controller
 
         $qrImage->insert($logoImage, 'center');
         $qrImage->save($path);
-    }    
+    }
+
+    public function getLogMutasi(Request $request) {
+        $logData = DB::table('hrd_r_mutasi as hrm')
+            ->join('view_tampil_karyawan as vtk', 'vtk.kd_karyawan', '=', 'hrm.kd_karyawan')
+            ->select('hrm.*', 'vtk.nama')
+            ->where('hrm.kd_karyawan', $request->kd_karyawan)
+            ->where('hrm.kd_mutasi', $request->kd_mutasi)
+            ->first();
+
+        // if (!$logData) {
+        //     return response('Data tidak ditemukan.');
+        // }
+
+        $verifData = [
+            [
+                'verif' => '1',
+                'kd_karyawan_verif' => $logData->kd_karyawan_verif_1,
+                'waktu_verif' => $logData->waktu_verif_1,
+                'nama_verif' => DB::table('view_tampil_karyawan')->where('kd_karyawan', $logData->kd_karyawan_verif_1)->value('nama')
+            ],
+            [
+                'verif' => '2',
+                'kd_karyawan_verif' => $logData->kd_karyawan_verif_2,
+                'waktu_verif' => $logData->waktu_verif_2,
+                'nama_verif' => DB::table('view_tampil_karyawan')->where('kd_karyawan', $logData->kd_karyawan_verif_2)->value('nama')
+            ],
+            [
+                'verif' => '3',
+                'kd_karyawan_verif' => $logData->kd_karyawan_verif_3,
+                'waktu_verif' => $logData->waktu_verif_3,
+                'nama_verif' => DB::table('view_tampil_karyawan')->where('kd_karyawan', $logData->kd_karyawan_verif_3)->value('nama')
+            ],
+            [
+                'verif' => '4',
+                'kd_karyawan_verif' => $logData->kd_karyawan_verif_4,
+                'waktu_verif' => $logData->waktu_verif_4,
+                'nama_verif' => DB::table('view_tampil_karyawan')->where('kd_karyawan', $logData->kd_karyawan_verif_4)->value('nama')
+            ],
+        ];
+
+        return view('mutasi.mutasi-on-process.timeline-item', ['verifData' => $verifData]);
+
+
+        // $getLog = DB::table('hrd_r_mutasi as hrm')
+        //     ->join('view_tampil_karyawan as vtk', 'vtk.kd_karyawan', '=', 'hrm.kd_karyawan')
+        //     ->leftJoin('view_tampil_karyawan as verif1', 'verif1.kd_karyawan', '=', 'hrm.kd_karyawan_verif_1')
+        //     ->leftJoin('view_tampil_karyawan as verif2', 'verif2.kd_karyawan', '=', 'hrm.kd_karyawan_verif_2')
+        //     ->leftJoin('view_tampil_karyawan as verif3', 'verif3.kd_karyawan', '=', 'hrm.kd_karyawan_verif_3')
+        //     ->leftJoin('view_tampil_karyawan as verif4', 'verif4.kd_karyawan', '=', 'hrm.kd_karyawan_verif_4')
+        //     ->select(
+        //         'hrm.*', 
+        //         'vtk.nama',
+        //         'verif1.nama as verif1_nama',
+        //         'verif2.nama as verif2_nama',
+        //         'verif3.nama as verif3_nama',
+        //         'verif4.nama as verif4_nama'
+        //     )
+        //     ->where('hrm.kd_karyawan', $request->kd_karyawan)
+        //     ->where('hrm.kd_mutasi', $request->kd_mutasi)
+        //     ->first();
+
+        // $log = [];
+        
+        // if ($getLog) {
+        //     for ($i = 1; $i <= 4; $i++) {
+        //         $verifKey = "verif_{$i}";
+        //         $karyawanVerifKey = "kd_karyawan_verif_{$i}";
+        //         $waktuVerifKey = "waktu_verif_{$i}";
+        //         $namaVerifKey = "verif{$i}_nama";
+
+        //         if ($getLog->$verifKey !== null) {
+        //             $log[] = [
+        //                 'verif' => $i,
+        //                 'kd_karyawan_verif' => $getLog->$karyawanVerifKey,
+        //                 'waktu_verif' => $getLog->$waktuVerifKey,
+        //                 'nama_verif' => $getLog->$namaVerifKey,
+        //             ];
+        //         }
+        //     }
+        // }
+
+        // return response()->json($log);
+    }
 }
