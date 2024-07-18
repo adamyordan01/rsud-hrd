@@ -21,6 +21,8 @@ License: For each use you must have a valid license purchased only from above li
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta property="og:url" content="https://keenthemes.com/metronic" />
 		<meta property="og:site_name" content="Metronic by Keenthemes" />
+		<!--csrf-token-->
+		<meta name="csrf-token" content="{{ csrf_token() }}">
 		<link rel="canonical" href="https://preview.keenthemes.com/metronic8" />
 		<link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
 		<!--begin::Fonts(mandatory for all pages)-->
@@ -58,8 +60,10 @@ License: For each use you must have a valid license purchased only from above li
 		<div class="d-flex flex-column flex-root" id="kt_app_root">
 			<div class="d-flex flex-column flex-lg-row flex-column-fluid">
 				<div class="d-flex flex-column flex-lg-row-fluid w-lg-50 p-10 order-2 order-lg-1">
-					<div class="d-flex flex-center flex-column flex-lg-row-fluid">
-						<div class="w-lg-500px p-10">
+					{{-- <div class="d-flex flex-center flex-column flex-lg-row-fluid"> --}}
+						{{-- <div class="w-lg-500px p-10"> --}}
+					<div class="d-lg-flex flex-center flex-column flex-lg-row-fluid">
+						<div class="w-lg-500px p-lg-10 px-5">
                             <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form" data-kt-redirect-url="index.html" action="{{ route('login.process') }}" method="post">
                                 @csrf
 								<div class="text-center mb-11">
@@ -78,12 +82,15 @@ License: For each use you must have a valid license purchased only from above li
 									<input type="text" placeholder="Kode Karyawan / Email" name="login" id="login" autocomplete="off" class="form-control bg-transparent" autofocus
                                     value="{{ old('login') }}"
                                     />
-                                    @error('login')
-                                        <div class="fv-plugins message-container invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    <div
+										class="fv-plugins-message-container invalid-feedback error-text login_error">
+									</div>
 								</div>
 								<div class="fv-row mb-3">
 									<input type="password" placeholder="Password" name="password" id="password" autocomplete="off" class="form-control bg-transparent" />
+									<div
+										class="fv-plugins-message-container invalid-feedback error-text password_error">
+									</div>
 								</div>
 								<div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
 									<div></div>
@@ -106,7 +113,7 @@ License: For each use you must have a valid license purchased only from above li
 				<div class="d-flex flex-lg-row-fluid w-lg-50 bgi-size-cover bgi-position-center order-1 order-lg-2" style="background-image: url({{ asset('assets/media/misc/auth-bg.png') }})">
 					<div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
 						<a href="index.html" class="mb-0 mb-lg-12">
-							<img alt="Logo" src="{{ asset('assets/media/logos/logo-rsud-langsa.png') }}" class="h-110px h-lg-125px" />
+							<img alt="Logo" src="{{ asset('assets/media/logos/logo-hrd-2.png') }}" class="h-60px h-lg-125px" />
 						</a>
 						{{-- <img class="d-none d-lg-block mx-auto w-275px w-md-50 w-xl-500px mb-10 mb-lg-20" src="assets/media/misc/auth-screens.png" alt="" />
 						<h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">Fast, Efficient and Productive</h1>
@@ -123,5 +130,101 @@ License: For each use you must have a valid license purchased only from above li
 		<script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
 		<script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
 		<script src="{{ asset('assets/js/custom/authentication/sign-in/general.js') }}"></script>
+
+		<script>
+			$.ajaxSetup({
+				headers:{
+					'X-CSRF-TOKEN':$('meta[name="csrf-token"]').attr('content')
+				}
+			});
+
+			$('#kt_sign_in_form').submit(function(e){
+				e.preventDefault();
+
+				var formData = new FormData(this);
+				var form = this;
+
+				var loadingIndicator = $('<span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>');
+				$(form).find('.btn-primary').append(loadingIndicator);
+
+				$.ajax({
+					url: $(this).attr('action'),
+					method: $(this).attr('method'),
+					data: formData,
+					processData: false,
+					contentType: false,
+					beforeSend: function(){
+						loadingIndicator.show();
+
+						$(form).find('.invalid-feedback').remove();
+						$(form).find('.is-invalid').removeClass('is-invalid');
+
+						$(form).find('.btn-primary').attr('disabled', true);
+                    	$(form).find('.btn-primary .indicator-label').hide();
+					},
+					complete: function(){
+						loadingIndicator.remove();
+
+						$(form).find('.btn-primary').attr('disabled', false);
+						$(form).find('.btn-primary .indicator-label').show();
+					},
+					success: function(data){
+						if(data.success == true){
+							toastr.success(data.message, 'Success');
+
+							// Redirect to dashboard after 1.5 seconds
+							setTimeout(function(){
+								window.location.href = data.redirect;
+							}, 1500);
+						}else{
+							$('#kt_sign_in_submit').attr('disabled', false);
+							$('#kt_sign_in_submit').html('Sign In');
+							Swal.fire({
+								icon: 'error',
+								title: 'Oops...',
+								text: data.errors.login,
+							});
+						}
+					},
+					error: function(xhr) {
+						if (xhr.status === 419) {
+							refreshCsrfToken().done(function () {
+								toastr.error('Token CSRF kadaluarsa, silahkan tekan tombol simpan kembali', 'Token CSRF Kadaluarsa');
+							})
+						} else if (xhr.status === 500) {
+							toastr.error('Internal Server Error', xhr.statusText);
+						} else {
+							handleFormErrors(xhr.responseJSON.errors);
+						}
+					}
+				});
+			});
+
+			function handleFormErrors(errors) {
+				if (!$.isEmptyObject(errors)) {
+					$('.error-text').remove();
+
+					$.each(errors, function(key, value) {
+						$('#' + key).closest('.fv-row').append('<div class="fv-plugins-message-container invalid-feedback error-text '+ key +'_error">' + value + '</div>');
+					})
+				}
+			}
+
+			function refreshCsrfToken() {
+				return $.get('/refresh-csrf').done(function(data) {
+					$('meta[name="csrf-token"]').attr('content', data.csrf_token);
+
+					// update @csrf too
+					$('input[name="_token"]').val(data.csrf_token);
+
+					// Update the token in the AJAX setup
+					$.ajaxSetup({
+						headers: {
+							'X-CSRF-TOKEN': data.csrf_token
+						}
+					});
+				});
+			}
+		</script>
 	</body>
 </html>

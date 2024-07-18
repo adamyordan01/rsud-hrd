@@ -20,10 +20,6 @@ class LoginController extends Controller
             'password.required' => 'Password tidak boleh kosong',
         ]);
 
-        // $validator->sometimes('login', 'email', function ($input) {
-        //     return !filter_var($input->login, FILTER_VALIDATE_EMAIL);
-        // });
-
         $validator = filter_var($request->input('login'), FILTER_VALIDATE_EMAIL)
             ? $validator->sometimes('login', 'email', function ($input) {
                 return !filter_var($input->login, FILTER_VALIDATE_EMAIL);
@@ -43,33 +39,33 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        // dd($request->all());
-        $this->validatedLogin($request)->validate();
-        
+        $validator = $this->validatedLogin($request);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         $kd_karyawan = $request->input('login');
         $password = md5($request->input('password'));
 
         $field = filter_var($kd_karyawan, FILTER_VALIDATE_EMAIL) ? 'EMAIL' : 'KD_KARYAWAN';
         $user = User::where($field, $kd_karyawan)->first();
-        // unset($user->PASSWORD);
 
-        // dd($user->PASSWORD == $password ? 'true' : 'false');
-        if ($user) {
-            if ($password == $user->password) {
-                Auth::login($user);
-                
-                // dd($user);
-                $request->session()->regenerate();
-                return redirect()->intended('/admin/dashboard');
-            } else {
-                return back()->withErrors([
-                    'login' => 'Kode karyawan atau password salah',
-                ]);
-            }
+        if ($user && $password == $user->password) {
+            Auth::login($user);
+            $request->session()->regenerate();
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil melakukan login',
+                'redirect' => '/admin/dashboard'
+            ]);
         } else {
-            return back()->withErrors([
-                'login' => 'Kode karyawan atau password salah',
-            ])->withInput();
+            return response()->json([
+                'success' => false,
+                'errors' => ['login' => 'Kode karyawan atau password salah']
+            ]);
         }
     }
 }
