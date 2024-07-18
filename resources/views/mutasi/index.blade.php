@@ -29,7 +29,10 @@
                     </h1>
                     <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0">
                         <li class="breadcrumb-item text-muted">
-                            <a href="#" class="text-muted text-hover-primary">
+                            <a
+                                href="{{ route('admin.dashboard.index') }}"
+                                class="text-muted text-hover-primary"
+                            >
                                 Dashboard 
                             </a>
                         </li>
@@ -532,7 +535,11 @@
                         kd_karyawan: kd_karyawan
                     },
                     success: function (response) {
+                        console.log(response);
                         handleResponse(response, kd_karyawan);
+
+                        // update nilai didalam count-status-proses dengan response.total-mutasi-pending
+                        $('.count-status-proses').text(response.total_mutasi_pending);
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
                         toastr.error('Error', 'Error');
@@ -609,6 +616,9 @@
 
                         // reset form #add-mutasi-nota
                         $('#add-mutasi-nota').trigger('reset');
+
+                        // update nilai didalam count-status-proses dengan response.total_mutasi_pending
+                        $('.count-status-proses').text(response.total_mutasi_pending);
                     }
 
                     kirimIdMutasi(response.id_mutasi);

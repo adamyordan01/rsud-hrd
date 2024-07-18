@@ -23,7 +23,7 @@
                     </h1>
                     <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0">
                         <li class="breadcrumb-item text-muted">
-                            <a href="/metronic8/demo39/index.html" class="text-muted text-hover-primary">
+                            <a href="{{ route('admin.dashboard.index') }}" class="text-muted text-hover-primary">
                                 Dashboard 
                             </a>
                         </li>
@@ -34,18 +34,6 @@
                             Mutasi (Verifikasi)
                         </li>
                     </ul>
-                </div>
-                <div class="d-flex align-items-center gap-2 gap-lg-3">
-
-                    <a href="javascript:void(0)" class="btn btn-flex btn-primary h-40px fs-7 fw-bold" data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_add_sk">
-                        <i class="ki-duotone ki-plus-square fs-2">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                            <span class="path3"></span>
-                        </i>
-                        Tambah SK Baru
-                    </a>
                 </div>
             </div>
         </div>
