@@ -1,71 +1,42 @@
 <div id="kt_app_header" class="app-header  d-flex flex-column flex-stack ">
 
-    <!--begin::Header main-->
     <div class="d-flex flex-stack flex-grow-1">
 
         <div class="app-header-logo d-flex align-items-center ps-lg-12" id="kt_app_header_logo">
-            <!--begin::Sidebar toggle-->
             <div id="kt_app_sidebar_toggle"
                 class="app-sidebar-toggle btn btn-sm btn-icon bg-body btn-color-gray-500 btn-active-color-primary w-30px h-30px ms-n2 me-4 d-none d-lg-flex "
                 data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body"
                 data-kt-toggle-name="app-sidebar-minimize">
 
                 <i class="ki-outline ki-abstract-14 fs-3 mt-1"></i> </div>
-            <!--end::Sidebar toggle-->
 
-            <!--begin::Sidebar mobile toggle-->
             <div class="btn btn-icon btn-active-color-primary w-35px h-35px ms-3 me-2 d-flex d-lg-none"
                 id="kt_app_sidebar_mobile_toggle">
                 <i class="ki-outline ki-abstract-14 fs-2"></i> </div>
-            <!--end::Sidebar mobile toggle-->
 
-            <!--begin::Logo-->
-            <a href="/metronic8/demo39/index.html" class="app-sidebar-logo">
+            <a href="{{ route('admin.dashboard.index') }}" class="app-sidebar-logo">
                 <img alt="Logo" src="{{ asset('assets/media/logos/logo-hrd.png') }}" class="h-35px theme-light-show" />
                 <img alt="Logo" src="{{ asset('assets/media/logos/logo-hrd.png') }}"
                     class="h-35px theme-dark-show" />
             </a>
-            <!--end::Logo-->
         </div>
 
-        <!--begin::Navbar-->
         <div class="app-navbar flex-grow-1 justify-content-end" id="kt_app_header_navbar">
             <div class="app-navbar-item d-flex align-items-stretch flex-lg-grow-1">
 
-                <!--begin::Search-->
                 <div id="kt_header_search" class="header-search d-flex align-items-center w-lg-350px"
                     data-kt-search-keypress="true" data-kt-search-min-length="2" data-kt-search-enter="enter"
                     data-kt-search-layout="menu" data-kt-search-responsive="true" data-kt-menu-trigger="auto"
                     data-kt-menu-permanent="true" data-kt-menu-placement="bottom-start">
 
-                    <!--begin::Tablet and mobile search toggle-->
                     <div data-kt-search-element="toggle"
                         class="search-toggle-mobile d-flex d-lg-none align-items-center">
                         <div class="d-flex ">
                             <i class="ki-outline ki-magnifier fs-1 fs-1"></i> </div>
                     </div>
-                    <!--end::Tablet and mobile search toggle-->
-
-                    <!--begin::Form(use d-none d-lg-block classes for responsive search)-->
-                    
-                    <!--end::Form-->
                 </div>
-                <!--end::Search-->
             </div>
 
-            <!--begin::Notifications-->
-            
-            <!--end::Notifications-->
-
-            <!--begin::Quick links-->
-            
-            <!--end::Quick links-->
-
-            <!--begin::Chat-->
-            
-            <!--end::Chat-->
-
-            <!--begin::User menu-->
             <div class="app-navbar-item ms-2 ms-lg-6 me-2 me-lg-6" id="kt_header_user_menu_toggle">
                 <!--begin::Menu wrapper-->
                 @php
@@ -128,7 +99,7 @@
 
                     <!--begin::Menu item-->
                     <div class="menu-item px-5">
-                        <a href="/metronic8/demo39/account/overview.html" class="menu-link px-5">
+                        <a href="#" class="menu-link px-5">
                             My Profile
                         </a>
                     </div>
@@ -136,90 +107,13 @@
 
                     <!--begin::Menu item-->
                     <div class="menu-item px-5">
-                        <a href="/metronic8/demo39/apps/projects/list.html" class="menu-link px-5">
-                            <span class="menu-text">My Projects</span>
+                        <a href="#" class="menu-link px-5">
+                            <span class="menu-text">Daftar Riwayat Hidup</span>
                             <span class="menu-badge">
                                 <span class="badge badge-light-danger badge-circle fw-bold fs-7">3</span>
                             </span>
                         </a>
                     </div>
-                    <!--end::Menu item-->
-
-                    <!--begin::Menu item-->
-                    <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
-                        data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
-                        <a href="#" class="menu-link px-5">
-                            <span class="menu-title">My Subscription</span>
-                            <span class="menu-arrow"></span>
-                        </a>
-
-                        <!--begin::Menu sub-->
-                        <div class="menu-sub menu-sub-dropdown w-175px py-4">
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/referrals.html" class="menu-link px-5">
-                                    Referrals
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/billing.html" class="menu-link px-5">
-                                    Billing
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/statements.html" class="menu-link px-5">
-                                    Payments
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/statements.html"
-                                    class="menu-link d-flex flex-stack px-5">
-                                    Statements
-
-                                    <span class="ms-2 lh-0" data-bs-toggle="tooltip" title="View your statements">
-                                        <i class="ki-outline ki-information-5 fs-5"></i> </span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu separator-->
-                            <div class="separator my-2"></div>
-                            <!--end::Menu separator-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <div class="menu-content px-3">
-                                    <label class="form-check form-switch form-check-custom form-check-solid">
-                                        <input class="form-check-input w-30px h-20px" type="checkbox" value="1"
-                                            checked="checked" name="notifications" />
-                                        <span class="form-check-label text-muted fs-7">
-                                            Notifications
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                            <!--end::Menu item-->
-                        </div>
-                        <!--end::Menu sub-->
-                    </div>
-                    <!--end::Menu item-->
-
-                    <!--begin::Menu item-->
-                    <div class="menu-item px-5">
-                        <a href="/metronic8/demo39/account/statements.html" class="menu-link px-5">
-                            My Statements
-                        </a>
-                    </div>
-                    <!--end::Menu item-->
 
                     <!--begin::Menu separator-->
                     <div class="separator my-2"></div>
@@ -283,7 +177,7 @@
                     <!--end::Menu item-->
 
                     <!--begin::Menu item-->
-                    <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                    {{-- <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                         data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
                         <a href="#" class="menu-link px-5">
                             <span class="menu-title position-relative">
@@ -360,12 +254,12 @@
                             <!--end::Menu item-->
                         </div>
                         <!--end::Menu sub-->
-                    </div>
+                    </div> --}}
                     <!--end::Menu item-->
 
                     <!--begin::Menu item-->
                     <div class="menu-item px-5 my-1">
-                        <a href="/metronic8/demo39/account/settings.html" class="menu-link px-5">
+                        <a href="#" class="menu-link px-5">
                             Account Settings
                         </a>
                     </div>
@@ -387,29 +281,18 @@
                 <!--end::User account menu-->
                 <!--end::Menu wrapper-->
             </div>
-            <!--end::User menu-->
 
             @guest
-                <!--begin::Action-->
                 <div class="app-navbar-item ms-2 ms-lg-6 me-lg-6">
-                    <!--begin::Link-->
                     <a href="#"
                         class="btn btn-icon btn-custom btn-color-gray-600 btn-active-color-primary w-35px h-35px w-md-40px h-md-40px">
                         <i class="ki-outline ki-exit-right fs-1"></i>
                     </a>
-                    <!--end::Link-->
                 </div>
-                <!--end::Action-->
             @endguest
 
-            <!--begin::Header menu toggle-->
-            <!--end::Header menu toggle-->
         </div>
-        <!--end::Navbar-->
     </div>
-    <!--end::Header main-->
 
-    <!--begin::Separator-->
     <div class="app-header-separator"></div>
-    <!--end::Separator-->
 </div>
