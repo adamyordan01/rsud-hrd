@@ -34,16 +34,19 @@ Route::get('/qr', function () {
 // Auth::loginUsingId('000662');
 
 Route::get('/', function () {
-    return view('welcome');
+    // admin dashboard
+    return redirect()->route('admin.dashboard.index');
 });
 
 Route::get('/refresh-csrf', function () {
     return response()->json(['csrf_token' => csrf_token()]);
 });
 
-// login
-Route::get('/', [LoginController::class, 'index'])->name('login');
-Route::post('/login/process', [LoginController::class, 'login'])->name('login.process');
+// bungkus login dengan middleware guest
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'index'])->name('login');
+    Route::post('/login/process', [LoginController::class, 'login'])->name('login.process');
+});
 
 Route::get('/check-status-bsre', [BsreController::class, 'checkStatus'])->name('check-status-bsre');
 Route::get('/sign-pdf', [BsreController::class, 'signPdf'])->name('sign-pdf');
