@@ -396,6 +396,99 @@ class MutasiOnProcessController extends Controller
         }
     }
 
+    // buat fungsi printDraftSk untuk menampilkan preview nota tugas mutasi tidak perlu tanda tangan elektronik dan langsung download jangan simpan di storage
+    public function printDraftSk($kd_karyawan, $kd_mutasi)
+    {
+        $logo = public_path('assets/media/rsud-langsa/logo-putih.png');
+        $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
+        $logoEsign = public_path('assets/media/rsud-langsa/e-sign.png');
+
+        $getVerifikasi = DB::table('view_verifikasi as vv')
+            ->join('view_tampil_karyawan as vtk', 'vv.kd_karyawan', '=', 'vtk.kd_karyawan')
+            ->leftJoin('hrd_golongan as hg', 'hg.kd_gol', '=', 'vtk.kd_gol_sekarang')
+            ->where('vv.kd_karyawan', $kd_karyawan)
+            ->where('vv.kd_mutasi', $kd_mutasi)
+            ->select('vv.*', 'vtk.pangkat', 'hg.alias_gol as alias_gol_sekarang')
+            ->first();
+
+            // dd($getVerifikasi);
+        // $getDataLama = sqlsrv_query($konek, "select m.KD_JENIS_TENAGA, m.KD_DETAIL, m.KD_SUB_DETAIL, j.SUB_DETAIL as JENIS_TENAGA, t.KD_RUANGAN, r.ruangan as RUANGAN from HRD_TEMPAT_KERJA t inner join HRD_R_MUTASI m on m.KD_KARYAWAN = t.KD_KARYAWAN and m.KD_MUTASI = t.KD_MUTASI inner join HRD_JENIS_TENAGA_SUB_DETAIL j on m.KD_JENIS_TENAGA = j.KD_JENIS_TENAGA and m.KD_DETAIL = j.KD_DETAIL and m.KD_SUB_DETAIL = j.KD_SUB_DETAIL inner join HRD_RUANGAN r on t.KD_RUANGAN = r.kd_ruangan where t.KD_KARYAWAN = '$kdkar' and t.NO_URUT = (select max(NO_URUT) from HRD_TEMPAT_KERJA where KD_KARYAWAN = '$kdkar')");
+        $getDataLama = DB::table('HRD_TEMPAT_KERJA as t')
+            ->join('HRD_R_MUTASI as m', function ($join) {
+                $join->on('m.KD_KARYAWAN', '=', 't.KD_KARYAWAN')
+                     ->on('m.KD_MUTASI', '=', 't.KD_MUTASI');
+            })
+            ->join('HRD_JENIS_TENAGA_SUB_DETAIL as j', function ($join) {
+                $join->on('m.KD_JENIS_TENAGA', '=', 'j.KD_JENIS_TENAGA')
+                     ->on('m.KD_DETAIL', '=', 'j.KD_DETAIL')
+                     ->on('m.KD_SUB_DETAIL', '=', 'j.KD_SUB_DETAIL');
+            })
+            ->join('HRD_RUANGAN as r', 't.KD_RUANGAN', '=', 'r.kd_ruangan')
+            ->select('m.KD_JENIS_TENAGA', 'm.KD_DETAIL', 'm.KD_SUB_DETAIL', 'j.SUB_DETAIL as JENIS_TENAGA', 't.KD_RUANGAN', 'r.ruangan as RUANGAN')
+            ->where('t.KD_KARYAWAN', $kd_karyawan)
+            ->where(function ($query) use ($kd_karyawan) {
+                $query->whereRaw('t.NO_URUT = (select max(NO_URUT) from HRD_TEMPAT_KERJA where KD_KARYAWAN = ?)', [$kd_karyawan]);
+            })
+            ->first();
+
+            // dd($getDataLama);
+            
+        $getDirektur = DB::table('view_tampil_karyawan as vtk')
+            ->join('hrd_golongan as hg', 'vtk.kd_gol_sekarang', '=', 'hg.kd_gol')
+            ->where('vtk.kd_jabatan_struktural', 1)
+            ->where('vtk.status_peg', 1)
+            ->select('vtk.*', 'hg.alias_gol as alias_gol_sekarang')
+            ->first();
+
+            // dd($getDirektur);
+
+        $year = date('Y');
+
+        $PNG_WEB_DIR = storage_path('app/public/qr-code-mutasi-nota/' . $year . '/');
+        if (!Storage::exists('public/qr-code-mutasi-nota/' . $year)) {
+            Storage::makeDirectory('public/qr-code-mutasi-nota/' . $year);
+        }
+        $imgName = $kd_mutasi . '-' . $kd_karyawan . '.png';
+        // "https://e-rsud.langsakota.go.id/hrd/cek-data.php?data=" . md5($result->kd_karyawan) . "&thn={$result->tahun_sk}";
+        $link = "https://e-rsud.langsakota.go.id/hrd/cek-mutasi-nota.php?kd-mutasi={$kd_mutasi}&kd-karyawan={$kd_karyawan}";
+
+        $this->generateQrCode($link, $PNG_WEB_DIR . $imgName, $logo);
+
+        $pdf = \PDF::loadView('mutasi.mutasi-on-process.nota-tugas-final', [
+            'getVerifikasi' => $getVerifikasi,
+            'getDataLama' => $getDataLama,
+            'getDirektur' => $getDirektur,
+            'logo' => $logo,
+            'logoLangsa' => $logoLangsa,
+            'logoEsign' => $logoEsign
+        ], [], [
+            'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
+            'orientation' => 'P',
+            'margin_top' => 5,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+            // font size 11pt
+            'default_font_size' => 11,
+            'default_font' => 'bookman-old-style',
+            'custom_font_dir' => base_path('public/assets/fonts/'),
+            'custom_font_data' => [
+                'bookman-old-style' => [
+                    'R' => 'Bookman Old Style Regular.ttf',
+                    'B' => 'Bookman Old Style Bold.ttf',
+                    'I' => 'Bookman Old Style Italic.ttf',
+                    'BI' => 'Bookman Old Style Bold Italic.ttf'
+                ]
+            ]
+        ]);
+
+        // return $pdf->stream();
+        // return pdf with name Draft Nota Tugas Mutasi - kd_mutasi-kd_karyawan.pdf
+        return $pdf->download('Draft Nota Tugas Mutasi - ' . $kd_mutasi . '-' . $kd_karyawan . '.pdf');
+    }
+
     private function getNotaNumber($kd_karyawan)
     {
         $data = DB::table('hrd_r_mutasi')

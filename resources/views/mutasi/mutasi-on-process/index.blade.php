@@ -144,6 +144,7 @@
                                             Jenis Tenaga Baru <br>
                                             Pada Ruangan Baru
                                         </th>
+                                        <th class="text-center">Status</th>
                                         <th class="min-w-125px text-center">Aksi</th>
                                     </tr>
                                 </thead>
@@ -151,7 +152,7 @@
                                     @forelse ($getMutasi as $item)
                                         {{-- <tr style="background: #1b84ff;"> --}}
                                         <tr class="bg-gray-500">
-                                            <td style="vertical-align: middle" colspan="5">
+                                            <td style="vertical-align: middle" colspan="6">
                                                 {{-- <b class="text-white">
                                                     Kode Mutasi - {{ $item->kd_mutasi }}
                                                 </b> --}}
@@ -207,6 +208,21 @@
                                                     {{ $data->jab_struk_baru }} <br>
                                                     {{ $data->sub_detail_baru }} <br>
                                                     {{ $data->ruangan_baru }}    
+                                                </td>
+                                                <td class="text-center">
+                                                    @if ($data->verif_1 == null)
+                                                    <!--buat terdapat enter kebawah-->
+                                                        Menunggu verifikasi Kasubbag. Kepeg.
+                                                    @elseif($data->verif_2 == null)
+                                                        Menunggu verifikasi Kabag. TU
+                                                        {{-- <span class="badge badge-light-info">Menunggu verifikasi <br><br> Kabag. TU</span> --}}
+                                                    @elseif($data->verif_3 == null)
+                                                        Menunggu verifikasi Wadir ADM dan Umum
+                                                        {{-- <span class="badge badge-light-warning">Menunggu verifikasi <br><br> Wadir ADM dan Umum</span> --}}
+                                                    @elseif($data->verif_4 == null)
+                                                        Menunggu verifikasi Direktur
+                                                        {{-- <span class="badge badge-light-success">Menunggu verifikasi <br><br> Direktur</span> --}}
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     @if ($data->verif_1 == null)
@@ -277,8 +293,10 @@
                                                         @endif
                                                     @endif
 
+                                                    {{-- Route::get('/mutasi-on-process/print-draft-sk/{kd_karyawan}/{kd_mutasi}', [MutasiOnProcessController::class, 'printDraftSk'])->name('print-draft-sk'); --}}
                                                     <a
-                                                        href="{{ route('admin.mutasi-on-process.index') }}"
+                                                        href="{{ route('admin.mutasi-on-process.print-draft-sk', [$data->kd_karyawan, $data->kd_mutasi]) }}"
+                                                        target="_blank"
                                                         class="btn btn-primary btn-sm d-block mb-2"
                                                     >
                                                         <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
