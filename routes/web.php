@@ -102,6 +102,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/mutasi-on-process/finalisasi', [MutasiOnProcessController::class, 'finalisasi'])->name('finalisasi');
         Route::get('/mutasi-on-process/rincian', [MutasiOnProcessController::class, 'rincian'])->name('rincian');
         Route::get('/mutasi-on-process/get-log-mutasi', [MutasiOnProcessController::class, 'getLogMutasi'])->name('get-log-mutasi');
+
+        // public function printDraftSk($kd_karyawan, $kd_mutasi)
+        Route::get('/mutasi-on-process/print-draft-sk/{kd_karyawan}/{kd_mutasi}', [MutasiOnProcessController::class, 'printDraftSk'])->name('print-draft-sk');
     });
 
     Route::name('mutasi-pending.')->group(function () {
