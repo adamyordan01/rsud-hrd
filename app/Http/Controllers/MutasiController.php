@@ -98,10 +98,18 @@ class MutasiController extends Controller
                 'kd_jenis_mutasi' => 1
             ]);
 
+        
+        $totalMutasiPending = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 0)
+            ->where('kd_jenis_mutasi', 1)
+            ->count();
+
         return response()->json([
             'code' => 3,
             'message' => "Berhasil menambahkan data mutasi dengan Id: {$idMutasi}",
-            'id_mutasi' => $idMutasi
+            'id_mutasi' => $idMutasi,
+            'total_mutasi_pending' => $totalMutasiPending
         ]);        
     }
 
@@ -371,9 +379,16 @@ class MutasiController extends Controller
             ->where('kd_mutasi', $id)
             ->delete();
 
+        $totalMutasiPending = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 0)
+            ->where('kd_jenis_mutasi', 1)
+            ->count();
+
         return response()->json([
             'code' => 2,
-            'message' => "Berhasil menghapus data mutasi dengan Id: {$id}"
+            'message' => "Berhasil menghapus data mutasi dengan Id: {$id}",
+            'total_mutasi_pending' => $totalMutasiPending
         ]);
     }
 
