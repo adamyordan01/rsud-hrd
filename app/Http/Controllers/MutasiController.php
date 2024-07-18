@@ -30,14 +30,12 @@ class MutasiController extends Controller
         $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 1)
-            ->groupBy('kd_mutasi')
             ->count();
 
         $totalMutasiPending = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 0)
             ->where('kd_jenis_mutasi', 1)
-            ->groupBy('kd_mutasi')
             ->count();
 
         return view('mutasi.index', [
@@ -74,8 +72,20 @@ class MutasiController extends Controller
         if ($mutasiExist) {
             return response()->json([
                 'code' => 2,
-                'message' => "Data mutasi dengan Id: {$idMutasi} sudah ada"
+                'message' => "Data mutasi dengan Kode Karyawan: {$request->kd_karyawan} sudah ada"
             ]);
+        } else {
+            $mutasiExistOnProcess = DB::table('hrd_r_mutasi')
+                ->where('kd_karyawan', $request->kd_karyawan)
+                ->where('kd_tahap_mutasi', 1)
+                ->first();
+
+            if ($mutasiExistOnProcess) {
+                return response()->json([
+                    'code' => 4,
+                    'message' => "Data mutasi dengan Kode Karyawan: {$request->kd_karyawan} masih didalam Daftar Mutasi (Proses)"
+                ]);
+            }
         }
 
         DB::table('hrd_r_mutasi')
@@ -97,7 +107,6 @@ class MutasiController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request->all());
 
         $now = date("Y-m-d H:i:s");
         $kdMutasi = $request->kd_mutasi_form;
@@ -142,9 +151,206 @@ class MutasiController extends Controller
         ]);
     }
 
-    public function edit($id)
+    public function editMutasiOnPending($id)
     {
+        $jabatanStruktural = DB::table('hrd_jabatan_struktural')
+            ->orderBy('jab_struk', 'ASC')
+            ->get();
+
+        $subDetail = DB::table('hrd_jenis_tenaga_sub_detail')
+            ->orderBy('sub_detail', 'ASC')
+            ->get();
+
+        $divisi = DB::table('hrd_divisi')
+            ->orderBy('divisi', 'ASC')
+            ->get();
+
+        $ruangan = DB::table('hrd_ruangan')
+            ->where('status_aktif', 1)
+            ->orderBy('ruangan', 'ASC')
+            ->get();
+
+        $mutasiOnPending = DB::table('hrd_r_mutasi')
+            ->join('view_tampil_karyawan', 'hrd_r_mutasi.kd_karyawan', '=', 'view_tampil_karyawan.kd_karyawan')
+            ->select('hrd_r_mutasi.kd_karyawan', 'hrd_r_mutasi.kd_mutasi', 'view_tampil_karyawan.jab_struk', 'view_tampil_karyawan.gelar_depan', 'view_tampil_karyawan.nama', 'view_tampil_karyawan.gelar_belakang', 'view_tampil_karyawan.ruangan', 'view_tampil_karyawan.sub_detail')
+            ->where('kd_mutasi', $id)
+            ->where('kd_tahap_mutasi', 0)
+            ->where('kd_jenis_mutasi', 1)
+            ->first();
+        // dd($mutasiOnPending);
         
+        $getDataMutasiOnPending = DB::table('VIEW_PROSES_MUTASI')
+            ->where('KD_MUTASI', $id)
+            ->first();
+
+        $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 1)
+            ->count();
+
+        $totalMutasiPending = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 0)
+            ->where('kd_jenis_mutasi', 1)
+            ->count();
+
+
+        return view('mutasi.edit', [
+            'jabatanStruktural' => $jabatanStruktural,
+            'subDetail' => $subDetail,
+            'divisi' => $divisi,
+            'ruangan' => $ruangan,
+            'mutasiOnPending' => $mutasiOnPending,
+            'getDataMutasiOnPending' => $getDataMutasiOnPending,
+            'totalMutasiOnProcess' => $totalMutasiOnProcess,
+            'totalMutasiPending' => $totalMutasiPending
+        ]);
+    }
+
+    public function updateMutasiOnPending(Request $request, $id)
+    {
+        $now = date("Y-m-d H:i:s");
+
+        $kdMutasi = $id;
+        $kdKaryawan = $request->kd_karyawan_form;
+        $jenisTenaga = $request->sub_jenis_tenaga;
+
+        $subDetailJenisTenaga = DB::table('hrd_jenis_tenaga_sub_detail')
+            ->where('sub_detail', $jenisTenaga)
+            ->first();
+
+        $kdJenisTenaga = $subDetailJenisTenaga->kd_jenis_tenaga;
+        $kdDetail = $subDetailJenisTenaga->kd_detail;
+        $kdSubDetail = $subDetailJenisTenaga->kd_sub_detail;
+
+        $tmtJabatan = Carbon::parse($request->tmt_jabatan)->format('Y-m-d');
+        $tglTtd = Carbon::parse($request->tgl_ttd)->format('Y-m-d');
+
+        DB::table('hrd_r_mutasi')
+            ->where('kd_mutasi', $kdMutasi)
+            ->update([
+                'isi_nota' => $request->isi_nota,
+                'isi_nota_2' => $request->isi_nota_2,
+                'kd_jab_struk' => $request->jab_struk,
+                'tmt_jabatan' => $tmtJabatan,
+                'kd_jenis_tenaga' => $kdJenisTenaga,
+                'kd_detail' => $kdDetail,
+                'kd_sub_detail' => $kdSubDetail,
+                'kd_divisi' => $request->divisi,
+                'kd_unit_kerja' => $request->unit,
+                'kd_sub_unit_kerja' => $request->sub_unit,
+                'kd_ruangan' => $request->ruangan,
+                'kd_tahap_mutasi' => 1,
+                'tgl_ttd' => $tglTtd,
+                'user_update' => auth()->user()->kd_karyawan,
+                'tgl_update' => $now
+            ]);
+
+        return response()->json([
+            'code' => 1,
+            'message' => "Berhasil menyimpan data mutasi dengan Id: {$kdMutasi}"
+        ]);
+    }
+
+    public function editMutasiOnProcess($id)
+    {
+        $jabatanStruktural = DB::table('hrd_jabatan_struktural')
+            ->orderBy('jab_struk', 'ASC')
+            ->get();
+
+        $subDetail = DB::table('hrd_jenis_tenaga_sub_detail')
+            ->orderBy('sub_detail', 'ASC')
+            ->get();
+
+        $divisi = DB::table('hrd_divisi')
+            ->orderBy('divisi', 'ASC')
+            ->get();
+
+        $ruangan = DB::table('hrd_ruangan')
+            ->where('status_aktif', 1)
+            ->orderBy('ruangan', 'ASC')
+            ->get();
+
+        $mutasiOnProcess = DB::table('hrd_r_mutasi')
+            ->join('view_tampil_karyawan', 'hrd_r_mutasi.kd_karyawan', '=', 'view_tampil_karyawan.kd_karyawan')
+            ->select('hrd_r_mutasi.kd_karyawan', 'hrd_r_mutasi.kd_mutasi', 'view_tampil_karyawan.jab_struk', 'view_tampil_karyawan.gelar_depan', 'view_tampil_karyawan.nama', 'view_tampil_karyawan.gelar_belakang', 'view_tampil_karyawan.ruangan', 'view_tampil_karyawan.sub_detail')
+            ->where('kd_mutasi', $id)
+            ->where('kd_tahap_mutasi', 1)
+            ->where('kd_jenis_mutasi', 1)
+            ->first();
+        // dd($mutasiOnProcess);
+        
+        $getDataMutasiOnProcess = DB::table('VIEW_PROSES_MUTASI')
+            ->where('KD_MUTASI', $id)
+            ->first();
+
+        $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 1)
+            ->count();
+
+        $totalMutasiPending = DB::table('hrd_r_mutasi')
+            ->select('kd_mutasi')
+            ->where('kd_tahap_mutasi', 0)
+            ->where('kd_jenis_mutasi', 1)
+            ->count();
+
+
+        return view('mutasi.edit-mutasi-nota-on-process', [
+            'jabatanStruktural' => $jabatanStruktural,
+            'subDetail' => $subDetail,
+            'divisi' => $divisi,
+            'ruangan' => $ruangan,
+            'mutasiOnProcess' => $mutasiOnProcess,
+            'getDataMutasiOnProcess' => $getDataMutasiOnProcess,
+            'totalMutasiOnProcess' => $totalMutasiOnProcess,
+            'totalMutasiPending' => $totalMutasiPending
+        ]);
+    }
+
+    public function updateMutasiOnProcess(Request $request, $id)
+    {
+        $now = date("Y-m-d H:i:s");
+
+        $kdMutasi = $id;
+        $kdKaryawan = $request->kd_karyawan_form;
+        $jenisTenaga = $request->sub_jenis_tenaga;
+
+        $subDetailJenisTenaga = DB::table('hrd_jenis_tenaga_sub_detail')
+            ->where('sub_detail', $jenisTenaga)
+            ->first();
+
+        $kdJenisTenaga = $subDetailJenisTenaga->kd_jenis_tenaga;
+        $kdDetail = $subDetailJenisTenaga->kd_detail;
+        $kdSubDetail = $subDetailJenisTenaga->kd_sub_detail;
+
+        $tmtJabatan = Carbon::parse($request->tmt_jabatan)->format('Y-m-d');
+        $tglTtd = Carbon::parse($request->tgl_ttd)->format('Y-m-d');
+
+        DB::table('hrd_r_mutasi')
+            ->where('kd_mutasi', $kdMutasi)
+            ->update([
+                'isi_nota' => $request->isi_nota,
+                'isi_nota_2' => $request->isi_nota_2,
+                'kd_jab_struk' => $request->jab_struk,
+                'tmt_jabatan' => $tmtJabatan,
+                'kd_jenis_tenaga' => $kdJenisTenaga,
+                'kd_detail' => $kdDetail,
+                'kd_sub_detail' => $kdSubDetail,
+                'kd_divisi' => $request->divisi,
+                'kd_unit_kerja' => $request->unit,
+                'kd_sub_unit_kerja' => $request->sub_unit,
+                'kd_ruangan' => $request->ruangan,
+                'kd_tahap_mutasi' => 1,
+                'tgl_ttd' => $tglTtd,
+                'user_update' => auth()->user()->kd_karyawan,
+                'tgl_update' => $now
+            ]);
+
+        return response()->json([
+            'code' => 1,
+            'message' => "Berhasil menyimpan data mutasi dengan Id: {$kdMutasi}"
+        ]);
     }
 
     public function deleteMutasiNota($id)
@@ -188,7 +394,7 @@ class MutasiController extends Controller
         $nama = $getPegawai->nama;
         $gelar_belakang = $getPegawai->gelar_belakang ?? '';
 
-        $nama_lengkap = $gelar_depan . ' ' . $nama . $gelar_belakang;
+        $nama_lengkap = trim("{$gelar_depan} {$nama} {$gelar_belakang}");
 
         $nip = $getPegawai->nip_baru ?? '----------------';
 

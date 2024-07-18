@@ -29,17 +29,16 @@
                     </h1>
                     <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0">
                         <li class="breadcrumb-item text-muted">
-                            <a href="#" class="text-muted text-hover-primary">
-                                Dashboard 
+                            <a href="{{ route('admin.mutasi.index') }}" class="text-muted text-hover-primary">
+                                Mutasi Nota 
                             </a>
                         </li>
                         <li class="breadcrumb-item">
                             <span class="bullet bg-gray-500 w-5px h-2px"></span>
                         </li>
                         <li class="breadcrumb-item text-muted">
-                            Mutasi Nota
+                            Edit Mutasi Nota
                         </li>
-                    </ul>
                 </div>
             </div>
         </div>
@@ -115,33 +114,25 @@
                 </div>
             </div>
 
-            <form class="form" novalidate="novalidate" id="add-mutasi-nota" method="POST" action="{{ route('admin.mutasi.store') }}">
+            <form class="form" 
+                novalidate="novalidate"
+                id="update-mutasi-nota"
+                method="POST"
+                action="{{ route('admin.mutasi.update-mutasi-nota-on-process', ['id' => $mutasiOnProcess->kd_mutasi]) }}"
+            >
                 @csrf
+                @method('PATCH')
                 <input type="hidden" name="kd_mutasi_form" id="kd_mutasi_form" value="">
                 <input type="hidden" name="kd_karyawan_form" id="kd_karyawan_form" value="">
                 <div class="card mb-5">
                     <div class="card-body p-lg-12">
                         <div class="row g-5 mb-5">
-                            <div class="col-6 fv-row ps-0">
-                                <input
-                                    type="text"
-                                    class="form-control form-control-solid"
-                                    name="kd_karyawan"
-                                    id="kd_karyawan"
-                                    placeholder="Masukkan ID Pegawai"
-                                    maxlength="6"
-                                    {{-- onkeyup="getKaryawan(this.value)" --}}
-                                />
-                                <small style="font-style: italic">Tekan [Enter] untuk menambahkan pegawai yang akan dimutasi</small>
-                                <div
-                                    class="fv-plugins-message-container invalid-feedback error-text ktp_error">
-                                </div>
-                            </div>
-                            <div class="col-6 fv-row">
-                                <input type="text" class="form-control form-control-transparent fw-bold"
-                                    id="load_pegawai" value=""
-                                    readonly
-                                />
+                            <!-- tombol back -->
+                            <div class="col-12 ps-0">
+                                <a href="{{ route('admin.mutasi.index') }}" class="btn btn-light fw-bold me-4">
+                                    <i class="ki-duotone ki-arrow-left fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                    Kembali
+                                </a>
                             </div>
                         </div>
                         <div class="row g-5 mb-5" id="list-mutasi-nota">
@@ -157,9 +148,29 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php
+                                        $gelar_depan = $mutasiOnProcess->gelar_depan ? $mutasiOnProcess->gelar_depan . ' ' : '';
+                                        $gelar_belakang = $mutasiOnProcess->gelar_belakang ? '' . $mutasiOnProcess->gelar_belakang : '';
+                                        $nama = $mutasiOnProcess->nama;
+                                        $nama_lengkap = $gelar_depan . $nama . $gelar_belakang;
+                                    @endphp
                                     <tr>
-                                        <td colspan="6" class="text-center">Tidak ada pegawai yang dipilih.</td>
-                                    </tr>
+                                        <td>{{ $mutasiOnProcess->kd_karyawan }}</td>
+                                        <td>{{ $nama_lengkap }}</td>
+                                        <td>{{ $mutasiOnProcess->jab_struk }}</td>
+                                        <td>{{ $mutasiOnProcess->ruangan }}</td>
+                                        <td>{{ $mutasiOnProcess->sub_detail }}</td>
+                                        <td>
+                                            <button
+                                                type="button"
+                                                class="btn btn-light btn-sm btn-active-light-danger me-2"
+                                                data-id="{{ $mutasiOnProcess->kd_mutasi }}"
+                                                id="btn-delete-mutasi-nota"
+                                            >
+                                                <i class="ki-duotone ki-trash fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                                Hapus
+                                            </button>
+                                        </td>
                                 </tbody>
                             </table>
                         </div>
@@ -174,7 +185,7 @@
                                         <label class="fw-semibold fs-6 mb-2 d-flex align-items-center">
                                             Isi Nota No. 1 : 
                                         </label>
-                                        <textarea class="form-control form-control-solid" name="isi_nota" id="isi_nota" rows="3"></textarea>
+                                        <textarea class="form-control form-control-solid" name="isi_nota" id="isi_nota" rows="3">{!! $getDataMutasiOnProcess->isi_nota ?? '' !!}</textarea>
                                         <div
                                             class="fv-plugins-message-container invalid-feedback error-text isi_nota_error">
                                         </div>
@@ -185,7 +196,7 @@
                                         <label class="fw-semibold fs-6 mb-2 d-flex align-items-center">
                                             Isi Nota No. 2 : 
                                         </label>
-                                        <textarea class="form-control form-control-solid" name="isi_nota_2" id="isi_nota_2" rows="3">Nota Tugas ini berlaku sejak tanggal ditetapkan.</textarea>
+                                        <textarea class="form-control form-control-solid" name="isi_nota_2" id="isi_nota_2" rows="3">{!! $getDataMutasiOnProcess->isi_nota_2 ?? 'Nota Tugas ini berlaku sejak tanggal ditetapkan.' !!}</textarea>
                                         <div
                                             class="fv-plugins-message-container invalid-feedback error-text isi_nota_2_error">
                                         </div>
@@ -203,7 +214,12 @@
                                         >
                                             <option value="">Pilih Jabatan</option>
                                             @foreach ($jabatanStruktural as $item)
-                                                <option value="{{ $item->kd_jab_struk }}">{{ $item->jab_struk }}</option>
+                                                <option
+                                                    {{ $item->kd_jab_struk == $getDataMutasiOnProcess->kd_jab_struk_baru ? 'selected' : '' }}
+                                                    value="{{ $item->kd_jab_struk }}"
+                                                >
+                                                    {{ $item->jab_struk }}
+                                                </option>
                                             @endforeach
                                         </select>
                                         <div
@@ -214,7 +230,12 @@
                                         <label class="fw-semibold fs-6 mb-2 d-flex align-items-center" for="nip_lama">
                                             TMT Jabatan
                                         </label>
-                                        <input class="form-control form-control-solid" name="tmt_jabatan" id="tmt_jabatan" />
+                                        <input
+                                            class="form-control form-control-solid"
+                                            name="tmt_jabatan"
+                                            id="tmt_jabatan" 
+                                            value="{{ date('d-m-Y', strtotime($getDataMutasiOnProcess->tmt_jabatan_baru)) }}"
+                                        />
                                         <div
                                             class="fv-plugins-message-container invalid-feedback error-text tmt_jabatan_error">
                                         </div>
@@ -232,7 +253,12 @@
                                         >
                                             <option value="">Pilih Sub Jenis Tenaga</option>
                                             @foreach ($subDetail as $item)
-                                                <option value="{{ $item->sub_detail }}">{{ $item->sub_detail }}</option>
+                                                <option
+                                                    value="{{ $item->sub_detail }}"
+                                                    {{ $item->sub_detail == $getDataMutasiOnProcess->sub_detail_baru ? 'selected' : '' }}
+                                                >
+                                                    {{ $item->sub_detail }}
+                                                </option>
                                             @endforeach
                                         </select>
                                         <div
@@ -258,7 +284,12 @@
                                         >
                                             <option value="">Pilih Sub Jenis Tenaga</option>
                                             @foreach ($divisi as $item)
-                                                <option value="{{ $item->kd_divisi }}">{{ $item->divisi }}</option>
+                                                <option
+                                                    {{ $item->kd_divisi == $getDataMutasiOnProcess->kd_divisi_baru ? 'selected' : '' }}
+                                                    value="{{ $item->kd_divisi }}"
+                                                >
+                                                    {{ $item->divisi }}
+                                                </option>
                                             @endforeach
                                         </select>
                                         <div
@@ -278,7 +309,11 @@
                                             id="unit"
                                             data-control="select2"
                                         >
-                                            <option value=""></option>
+                                            <option
+                                                value="{{ $getDataMutasiOnProcess->kd_divisi_baru }}"
+                                            >
+                                                {{ $getDataMutasiOnProcess->unit_kerja_baru }}
+                                            </option>
                                         </select>
                                         <div
                                             class="fv-plugins-message-container invalid-feedback error-text unit_error">
@@ -296,7 +331,11 @@
                                             data-control="select2"
                                             data-placeholder="Pilih Sub Bag. / Sub Bid. / Instalasi / Unit"
                                         >
-                                            <option value=""></option>
+                                            <option
+                                                value="{{ $getDataMutasiOnProcess->kd_sub_unit_kerja_baru }}"
+                                            >
+                                                {{ $getDataMutasiOnProcess->sub_unit_kerja_baru }}
+                                            </option>
                                         </select>
                                         <div
                                             class="fv-plugins-message-container invalid-feedback error-text sub_unit_error">
@@ -316,7 +355,12 @@
                                         >
                                             <option value="">Pilih Ruangan</option>
                                             @foreach ($ruangan as $item)
-                                                <option value="{{ $item->kd_ruangan }}">{{ $item->ruangan }}</option>
+                                                <option
+                                                    {{ $item->kd_ruangan == $getDataMutasiOnProcess->kd_ruangan_baru ? 'selected' : '' }}
+                                                    value="{{ $item->kd_ruangan }}"
+                                                >
+                                                    {{ $item->ruangan }}
+                                            </option>
                                             @endforeach
                                         </select>
                                         <div
@@ -394,7 +438,6 @@
             }
         });
 
-        // input mask for tmt_jabatan
         Inputmask("datetime", {
             inputFormat: "dd-mm-yyyy",
             separator: "-",
@@ -486,78 +529,7 @@
             });
         });
 
-        $('#kd_karyawan').keyup(function (e) {
-            const length = e.target.value.length;
-            console.log(e.which == 13);
-
-            if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
-                return false;
-            }
-
-            if (length == 6) {
-                console.log("get karyawan");
-                $.ajax({
-                    url: "{{ route('admin.mutasi.check-pegawai', '') }}/" + e.target.value,
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        id: e.target.value
-                    },
-                    cache: false,
-                    success: function(response) {
-                        if (response.code == 4) {
-                            $('#load_pegawai').val(`${response.nama} - ${response.nip}`);
-                        } else {
-                            toastr.error(response.message, 'Error');
-                            $('#load_pegawai').val('');
-                        }
-                    }
-                });
-            } else if (length < 6) {
-                $('#load_pegawai').val('');
-            }
-        })
-        
-        $('#kd_karyawan').keypress(function (e) {
-            if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
-                var kd_karyawan = $(this).val();
-                e.preventDefault();
-                console.log("keypressed");
-
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('admin.mutasi.store-mutasi-nota') }}",
-                    dataType: "json",
-                    data: {
-                        kd_karyawan: kd_karyawan
-                    },
-                    success: function (response) {
-                        handleResponse(response, kd_karyawan);
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        toastr.error('Error', 'Error');
-                    }
-                });
-                return false;
-            }
-        });
-
-        function kirimIdMutasi(id) {
-            $.ajax({
-                url: "{{ route('admin.mutasi.list-mutasi-nota', '') }}/" + id,
-                type: "GET",
-                data: {
-                    id: id
-                },
-                cache: false,
-                success: function(response) {
-                    $('#list-mutasi-nota').html(response);
-                }
-            });
-        }
-
-        // ketika form #add-mutasi-nota di submit
-        $('#add-mutasi-nota').submit(function (e) {
+        $('#update-mutasi-nota').submit(function (e) {
             e.preventDefault();
 
             var form = $(this);
@@ -565,11 +537,6 @@
             var method = form.attr('method');
             var data = form.serialize();
 
-            // ambil kd_mutasi dan kd_karyawan kemudian masukkan kedalam #kd_mutasi dan #kd_karyawan
-            var kd_mutasi = $('#kd_mutasi').val();
-            var kd_karyawan = $('#kd_karyawan').val();
-            
-            var redirect = "{{ route('admin.mutasi-on-process.index') }}";
             $.ajax({
                 url: url,
                 type: method,
@@ -579,65 +546,89 @@
                     if (response.code == 1) {
                         // toast success
                         toastr.success(response.message, 'Success');
+                        // reset form #update-mutasi-nota
+                        $('#update-mutasi-nota').trigger('reset');
+    
+                        // redirect
+                        window.location.href = "{{ route('admin.mutasi-on-process.index') }}";
+                    } else {
+                        // toast error
+                        toastr.error(response.message, 'Error');
                     }
 
-                    kirimIdMutasi(response.id_mutasi);
-
-                    // reset form #add-mutasi-nota
-                    $('#add-mutasi-nota').trigger('reset');
-
-                    // redirect
-                    window.location.href = redirect;
                 }
             });
         });
+
+        // $('#add-mutasi-nota').submit(function (e) {
+        //     e.preventDefault();
+
+        //     var form = $(this);
+        //     var url = form.attr('action');
+        //     var method = form.attr('method');
+        //     var data = form.serialize();
+
+        //     // ambil kd_mutasi dan kd_karyawan kemudian masukkan kedalam #kd_mutasi dan #kd_karyawan
+        //     var kd_mutasi = $('#kd_mutasi').val();
+        //     var kd_karyawan = $('#kd_karyawan').val();
+            
+        //     var redirect = "{{ route('admin.mutasi-on-process.index') }}";
+        //     $.ajax({
+        //         url: url,
+        //         type: method,
+        //         data: data,
+        //         cache: false,
+        //         success: function(response) {
+        //             if (response.code == 1) {
+        //                 // toast success
+        //                 toastr.success(response.message, 'Success');
+        //             }
+
+        //             kirimIdMutasi(response.id_mutasi);
+
+        //             // reset form #add-mutasi-nota
+        //             $('#add-mutasi-nota').trigger('reset');
+
+        //             // redirect
+        //             window.location.href = redirect;
+        //         }
+        //     });
+        // });
 
         $(document).on('click', '#btn-delete-mutasi-nota', function () {
             var id = $(this).data('id');
+            
+            Swal.fire({
+                title: 'Apakah Anda Yakin?',
+                text: "Data yang dihapus tidak dapat dikembalikan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('admin.mutasi.delete-mutasi-nota', '') }}/" + id,
+                        type: "DELETE",
+                        data: {
+                            id: id
+                        },
+                        cache: false,
+                        success: function(response) {
+                            if (response.code == 2) {
+                                // toast success
+                                toastr.success(response.message, 'Success');
 
-            $.ajax({
-                url: "{{ route('admin.mutasi.delete-mutasi-nota', '') }}/" + id,
-                type: "DELETE",
-                data: {
-                    id: id
-                },
-                cache: false,
-                success: function(response) {
-                    if (response.code == 2) {
-                        // toast success
-                        toastr.success(response.message, 'Success');
-
-                        // reset form #add-mutasi-nota
-                        $('#add-mutasi-nota').trigger('reset');
-                    }
-
-                    kirimIdMutasi(response.id_mutasi);
+                                // reload page and redirect to mutasi.index
+                                setTimeout(() => {
+                                    window.location.href = "{{ route('admin.mutasi.index') }}";
+                                }, 1000);
+                            }
+                        }
+                    });
                 }
             });
         });
-
-        function handleResponse(response, kd_karyawan) {
-            switch (response.code) {
-                case 1:
-                    toastr.error(response.message, 'Error');
-                    break;
-                case 2:
-                    toastr.error(response.message, 'Error');
-                    break;
-                case 3:
-                    toastr.success(response.message, 'Success');
-                    $('#kd_mutasi_form').val(response.id_mutasi);
-                    $('#kd_karyawan_form').val(kd_karyawan);
-                    kirimIdMutasi(response.id_mutasi);
-                    $('#kd_karyawan').val('');
-                    break;
-                case 4:
-                    toastr.success(response.message, 'Success');
-                    break;
-                default:
-                    toastr.error('Kode respon tidak dikenal.', 'Error');
-                    break;
-            }
-        }
     </script>
 @endpush
