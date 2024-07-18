@@ -169,9 +169,13 @@
                                             <td>{{ $data->ruangan }}</td>
                                             <td>{{ $data->sub_detail }}</td>
                                             <td>
-                                                {{-- button untuk kembali ke mutasi.index untuk melakukan edit data --}}
+                                                {{-- Route::prefix('admin')->name('admin.')->group(function () {
+                                                    Route::name('mutasi.')->group(function () {
+                                                        Route::get('/mutasi/{id}/edit', [MutasiController::class, 'edit'])->name('edit');
+                                                        Route::patch('/mutasi/{id}/update', [MutasiController::class, 'update'])->name('update');
+                                                    }); --}}
                                                 <a
-                                                    href="{{ route('admin.mutasi-on-process.index') }}"
+                                                    href="{{ route('admin.mutasi.edit-mutasi-nota-on-pending', $data->kd_mutasi) }}"
                                                     class="btn btn-light btn-sm btn-active-light-primary me-2 mb-2"
                                                 >
                                                     <i class="ki-duotone ki-arrow-left fs-2"><span class="path1"></span><span class="path2"></span></i>
