@@ -33,7 +33,6 @@ class MutasiVerifikasiController extends Controller
         $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 1)
-            ->where('kd_jenis_mutasi', 1)
             ->count();
 
         $totalMutasiPending = DB::table('hrd_r_mutasi')
