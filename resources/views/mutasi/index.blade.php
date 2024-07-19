@@ -147,7 +147,7 @@
                                 />
                             </div>
                         </div>
-                        <div class="row g-5 mb-5" id="list-mutasi-nota">
+                        <div class="row g-5 mb-5 table-responsive" id="list-mutasi-nota">
                             <table class="table table-bordered table-stripped align-middle">
                                 <thead>
                                     <tr>

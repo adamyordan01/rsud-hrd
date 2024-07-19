@@ -110,7 +110,7 @@
 
             <div class="card mb-5">
                 <div class="card-body p-lg-12">
-                    <div class="row g-5 mb-5" id="list-mutasi-pending">
+                    <div class="row g-5 mb-5 table-responsive" id="list-mutasi-pending">
                         <table class="table table-bordered table-stripped align-middle">
                             <thead>
                                 <tr>
