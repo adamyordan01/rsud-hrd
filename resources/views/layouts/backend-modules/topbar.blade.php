@@ -40,13 +40,32 @@
             <div class="app-navbar-item ms-2 ms-lg-6 me-2 me-lg-6" id="kt_header_user_menu_toggle">
                 <!--begin::Menu wrapper-->
                 @php
-                    // ambil nama nama pertama dan kedua jika ada pada user, kemudian gunakan https://ui-avatars.com/api/?name=Elon+Musk&background=random
-                    $nama = explode(' ', auth()->user()->nama);
-                    $nama = $nama[0] . '+' . $nama[1];
+                    // Ambil nama user
+                    $userNama = auth()->user()->nama;
 
-                    // ambil inisial nama user
-                    $inisial = substr($nama, 0, 1);
+                    // Pisahkan nama menjadi array berdasarkan spasi
+                    $namaArray = explode(' ', $userNama);
 
+                    // Inisialisasi variabel untuk nama yang akan digunakan dalam URL avatar
+                    $nama = '';
+                    $defaultNama = 'Default+Name'; // Nilai default jika terjadi error
+
+                    // Tentukan nama yang akan digunakan berdasarkan jumlah kata dalam array nama
+                    if (count($namaArray) >= 2) {
+                        // Jika ada lebih dari atau sama dengan 2 kata, gunakan kata pertama dan kedua
+                        $nama = $namaArray[0] . '+' . $namaArray[1];
+                    } elseif (count($namaArray) == 1) {
+                        // Jika hanya ada 1 kata, gunakan kata tersebut
+                        $nama = $namaArray[0];
+                    } else {
+                        // Jika terjadi error atau tidak ada kata, gunakan nilai default
+                        $nama = $defaultNama;
+                    }
+
+                    // Ambil inisial nama user (inisial dari kata pertama)
+                    $inisial = substr($namaArray[0], 0, 1);
+
+                    // Buat URL avatar menggunakan nama yang telah ditentukan
                     $avatar = 'https://ui-avatars.com/api/?name=' . $nama . '&background=random';
                 @endphp
                 <div class="cursor-pointer symbol symbol-circle symbol-30px symbol-lg-45px"
