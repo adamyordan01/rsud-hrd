@@ -170,8 +170,8 @@
         <div
             style="border-top: 2.5px solid #282828;border-bottom: 1px solid #282828;border-left: 0;border-right: 0; margin: 0px;padding-top:1px">
         </div>
-        <label>
-            <b style="font-size: 14pt; margin-bottom: 0px; font-weight:600">
+        <label style="margin-top: 10px">
+            <b style="font-size: 14pt; margin-bottom: 0px;">
                 <u>NOTA TUGAS</u>
             </b>
         </label>
