@@ -198,6 +198,9 @@
 
                                     $tanggal_lahir = date('d-m-Y', strtotime($item->tgl_lahir));
                                     $tempat_tanggal_lahir = $item->tempat_lahir . ', ' . $tanggal_lahir;
+
+                                    $filePathTte = $item->path_dokumen ?? '';
+                                    $urlFilePathtte = Storage::url($filePathTte);
                                 @endphp
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
@@ -215,7 +218,10 @@
                                             {{ $item->ruangan }}
                                         </td>
                                         <td class="text-center">
-                                            <a href="#" class="btn btn-primary btn-sm">
+                                            <a
+                                                href="{{ $urlFilePathtte }}"
+                                                class="btn btn-primary btn-sm"
+                                            >
                                                 <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
                                                 Cetak Nota
                                             </a>
