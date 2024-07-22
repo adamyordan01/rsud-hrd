@@ -1,3 +1,8 @@
+@php
+    $jabatan = Auth::user()->kd_jabatan_struktural;
+    $ruangan = Auth::user()->kd_ruangan;
+@endphp
+
 <div id="kt_app_sidebar" class="app-sidebar  flex-column " data-kt-drawer="true" data-kt-drawer-name="app-sidebar"
     data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="250px"
     data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
@@ -303,17 +308,32 @@
                     <!--end:Menu link-->
                 </div>
                 
-                <div class="menu-item">
-                    <a
-                        class="menu-link @if (request()->routeIs('admin.mutasi*')) active @endif"
-                        href="{{ route('admin.mutasi.index') }}"
-                    >
-                        <span class="menu-icon">
-                            <i class="ki-duotone ki-arrows-loop fs-2"><span class="path1"></span><span class="path2"></span></i>
-                        </span>
-                        <span class="menu-title">Mutasi</span>
-                    </a>
-                </div>
+                <!-- check jika $jabatan saat login adalah 19 atau 7 atau 3 atau 1 maka arahkan ke menu ini -->
+                @if ($jabatan == 19 || $jabatan == 7 || $jabatan == 3 || $jabatan == 1)
+                    <div class="menu-item">
+                        <a
+                            class="menu-link @if (request()->routeIs('admin.mutasi*')) active @endif"
+                            href="{{ route('admin.mutasi-on-process.index') }}"
+                        >
+                            <span class="menu-icon">
+                                <i class="ki-duotone ki-arrows-loop fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            </span>
+                            <span class="menu-title">Mutasi</span>
+                        </a>
+                    </div>
+                @else
+                    <div class="menu-item">
+                        <a
+                            class="menu-link @if (request()->routeIs('admin.mutasi*')) active @endif"
+                            href="{{ route('admin.mutasi.index') }}"
+                        >
+                            <span class="menu-icon">
+                                <i class="ki-duotone ki-arrows-loop fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            </span>
+                            <span class="menu-title">Mutasi</span>
+                        </a>
+                    </div>
+                @endif
             </div>
             <!--end::Sidebar menu-->
         </div>
