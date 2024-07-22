@@ -31,6 +31,8 @@ class MutasiOnProcessController extends Controller
             ->where('kd_tahap_mutasi', 1)
             ->groupBy('kd_mutasi')
             ->get();
+            // print_r($getMutasi);
+            // die;
 
             // select count(KD_MUTASI) as hitung from HRD_R_MUTASI where KD_TAHAP_MUTASI = 1 and KD_JENIS_MUTASI = 1
         $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
@@ -470,6 +472,10 @@ class MutasiOnProcessController extends Controller
             'margin_left' => 15,
             'margin_header' => 5,
             'margin_footer' => 5,
+            'show_watermark' => true,
+            'watermark' => 'DRAFT',
+            'watermark_font' => 'Arial',
+            'watermark_alpha' => 0.1,
             // font size 11pt
             'default_font_size' => 11,
             'default_font' => 'bookman-old-style',
