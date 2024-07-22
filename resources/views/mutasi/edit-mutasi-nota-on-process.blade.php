@@ -282,7 +282,7 @@
                                             id="divisi"
                                             data-control="select2"
                                         >
-                                            <option value="">Pilih Sub Jenis Tenaga</option>
+                                            <option value="">Pilih Departement</option>
                                             @foreach ($divisi as $item)
                                                 <option
                                                     {{ $item->kd_divisi == $getDataMutasiOnProcess->kd_divisi_baru ? 'selected' : '' }}
