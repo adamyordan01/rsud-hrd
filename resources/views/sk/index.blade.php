@@ -214,31 +214,31 @@
                                             }
                                         } else {
                                             $status = "Telah diverifikasi";
-                                            // $tte_sk = "
-                                            //     <a
-                                            //         href='javascript:void(0)'
-                                            //         class='btn btn-success btn-sm d-block mb-2'
-                                            //         title='TTE SK'
-                                            //         data-bs-toggle='modal'
-                                            //         data-bs-target='#kt_modal_finalisasi'
-                                            //         id='tte_sk'
-                                            //     >
-                                            //         <i class='ki-duotone ki-fingerprint-scanning fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Tanda Tangan Elektronik SK
-                                            //     </a>
-                                            // ";
-                                            $sk = "<a 
+
+                                            if ($item->nomor_konsederan == "") {
+                                                $sk = "<a 
                                                         href='$urlFilePathtte'
                                                         class='btn btn-danger btn-sm d-block mb-2' title='SK' target='_blank'
                                                     >
                                                         <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Cetak SK
                                                     </a>";
-                                            $konsederan = "<a href='module/sk/print_konsederan.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-success btn-sm d-block mb-2' title='Konsederan' target='_blank'>
-                                                                <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Konsederan
-                                                            </a>";
-                                            $serahTerima = "<a href='module/sk/print_serahterima.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-info btn-sm d-block mb-2' title='Lembar Serah Terima' target='_blank'>
-                                                                <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Serah Terima
-                                                            </a>";
-                                            $button = $sk.$konsederan.$serahTerima;
+
+                                                $button = $sk;
+                                            } else {
+                                                $sk = "<a 
+                                                            href='$urlFilePathtte'
+                                                            class='btn btn-danger btn-sm d-block mb-2' title='SK' target='_blank'
+                                                        >
+                                                            <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Cetak SK
+                                                        </a>";
+                                                $konsederan = "<a href='module/sk/print_konsederan.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-success btn-sm d-block mb-2' title='Konsederan' target='_blank'>
+                                                                    <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Konsederan
+                                                                </a>";
+                                                $serahTerima = "<a href='module/sk/print_serahterima.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-info btn-sm d-block mb-2' title='Lembar Serah Terima' target='_blank'>
+                                                                    <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Serah Terima
+                                                                </a>";
+                                                $button = $sk.$konsederan.$serahTerima;
+                                            }
                                         }
                                     @endphp
 
@@ -268,7 +268,12 @@
                                             </td>
                                             <td class="">
                                                 {!! $button !!}
-                                                <a href='module/sk/print_pkerja.php?data={{ $item->urut }}&thn={{ $item->tahun_sk }}' class='btn btn-warning btn-sm d-block mb-2' title='Perjanjian Kerja' target='_blank'>
+                                                <a
+                                                    {{-- href='module/sk/print_pkerja.php?data={{ $item->urut }}&thn={{ $item->tahun_sk }}'  --}}
+                                                    href="{{ route('admin.sk-kontrak.print-perjanjian-kerja', ['urut' => $item->urut, 'tahun' => $item->tahun_sk]) }}"
+                                                    class='btn btn-warning btn-sm d-block mb-2'
+                                                    title='Perjanjian Kerja' target='_blank'
+                                                >
                                                     <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i>
                                                     Perjanjian Kerja
                                                 </a>
