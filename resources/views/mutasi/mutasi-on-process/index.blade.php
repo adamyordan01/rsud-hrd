@@ -43,7 +43,7 @@
 @section('content')
     <div id="kt_app_content" class="app-content  flex-column-fluid ">
         <div id="kt_app_content_container" class="app-container  container-fluid ">
-            <div class="card-rounded bg-light d-flex flex-stack flex-wrap p-5 mb-8">
+            {{-- <div class="card-rounded bg-light d-flex flex-stack flex-wrap p-5 mb-8">
                 <div class="hover-scroll-x">
                     <ul class="nav flex-nowrap border-transparent fw-bold">
                         <li class="nav-item my-1">
@@ -107,15 +107,28 @@
                         </li>
                     </ul>
                 </div>
-            </div>
+            </div> --}}
+            <x-navigation-menu :totalMutasiPending="$totalMutasiPending" :totalMutasiOnProcess="$totalMutasiOnProcess" />
 
             <div class="card mb-5">
-                <div class="card-body p-lg-12">
+                <div class="card-header align-items-center py-5 gap-2 gap-md-5 border-0">
+                    <div class="card-title">
+                        <div class="d-flex align-items-center position-relative my-1">
+                            <i class="ki-outline ki-magnifier fs-3 position-absolute ms-4"></i>
+                            <input 
+                                type="text"
+                                data-kt-sk-table-filter="search"
+                                class="form-control form-control-solid w-300px ps-12" placeholder="Cari Karyawan">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body ps-lg-12 pt-lg-0 pb-lg-0">
                     <div class="row g-5 mb-5" id="list-mutasi-verifikasi">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-stripped align-middle">
+                            <table class="table table-bordered table-stripped align-middle" id="mutasi-on-process-table">
                                 <thead>
                                     <tr>
+                                        <th class="text-center">Kd. Mutasi</th>
                                         <th>ID Peg.</th>
                                         <th class="text-center vertical-align-middle">
                                             Nama <br>
@@ -139,12 +152,8 @@
                                 <tbody>
                                     @forelse ($getMutasi as $item)
                                         {{-- <tr style="background: #1b84ff;"> --}}
-                                        <tr class="bg-gray-500">
+                                        {{-- <tr class="bg-gray-500">
                                             <td style="vertical-align: middle" colspan="6">
-                                                {{-- <b class="text-white">
-                                                    Kode Mutasi - {{ $item->kd_mutasi }}
-                                                </b> --}}
-                                                {{-- kode mutasi pada sisi kiri, dan button edit pada sisi kanan --}}
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <span class="text-dark fw-bold fs-5">
                                                         Kode Mutasi - {{ $item->kd_mutasi }}
@@ -158,7 +167,7 @@
                                                     </a>
                                                 </div>
                                             </td>
-                                        </tr>
+                                        </tr> --}}
 
                                         @php
                                             // select * from VIEW_PROSES_MUTASI where KD_MUTASI = '".$dataMutasi['KD_MUTASI']."' and KD_TAHAP_MUTASI = 1
@@ -181,6 +190,7 @@
                                                 }
                                             @endphp
                                             <tr>
+                                                <td class="text-center">{{ $data->kd_mutasi }}</td>
                                                 <td>{{ $data->kd_karyawan }}</td>
                                                 <td>
                                                     {{ $nama }} <br>
@@ -281,7 +291,16 @@
                                                         @endif
                                                     @endif
 
-                                                    {{-- Route::get('/mutasi-on-process/print-draft-sk/{kd_karyawan}/{kd_mutasi}', [MutasiOnProcessController::class, 'printDraftSk'])->name('print-draft-sk'); --}}
+                                                    @if ($ruangan == 91 || $ruangan == 57)
+                                                        <a
+                                                            href="{{ route('admin.mutasi.edit-mutasi-nota-on-process', $item->kd_mutasi) }}"
+                                                            class="btn btn-light-dark btn-sm d-block mb-2"
+                                                        >
+                                                            <i class="ki-duotone ki-notepad-edit fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                                            Edit Mutasi Nota
+                                                        </a>
+                                                        
+                                                    @endif
                                                     <a
                                                         href="{{ route('admin.mutasi-on-process.print-draft-sk', [$data->kd_karyawan, $data->kd_mutasi]) }}"
                                                         target="_blank"
@@ -471,7 +490,87 @@
             }
         });
 
+        // var KTSKList = (function () {
+        //     var table,
+        //     $table = $('#mutasi-on-process-table');
+
+        //     return {
+        //         init: function () {
+        //             if ($table.length) {
+        //                 table = $table.DataTable({
+        //                     info: true,
+        //                     order: [],
+        //                     // pageLength: 10,
+        //                     displayLength: 10,
+        //                     lengthChange: true,
+        //                     columnDefs: [
+        //                         { orderable: false, targets: [0, 5] }
+        //                         // { orderable: false, targets: 7 },
+        //                     ],
+        //                 });
+
+        //                 $('[data-kt-sk-table-filter="search"]').on("keyup", function () {
+        //                     // table.search($(this).val()).draw();
+        //                     table.column(3).search($(this).val()).draw();
+        //                 });
+
+        //                 $('[data-kt-user-table-filter="reset"]').on("click", function () {
+        //                     $('[data-kt-user-table-filter="form"] select').val("").trigger("change");
+        //                     table.search("").draw();
+        //                 });
+
+        //                 $('[data-kt-user-table-filter="form"] [data-kt-user-table-filter="filter"]').on("click", function () {
+        //                     var filterString = "";
+        //                     $('[data-kt-user-table-filter="form"] select').each(function (index) {
+        //                         // if (this.value && this.value !== "") {
+        //                         //     if (index !== 0) {
+        //                         //         filterString += " ";
+        //                         //     }
+        //                         //     filterString += this.value;
+        //                         // }
+        //                         if (this.value) {
+        //                             filterString += (index !== 0 ? " " : "") + this.value;
+        //                         }
+        //                     });
+        //                     table.search(filterString).draw();
+        //                 });
+        //             }
+        //         },
+        //     };
+        // })();
+
         $(document).ready(function() {
+            // KTSKList.init();
+
+            var table = $('#mutasi-on-process-table').DataTable({
+                info: true,
+                order: [],
+                pageLength: 10,
+                lengthChange: true,
+                columnDefs: [
+                    { orderable: false, targets: [6] }
+                ],
+            });
+
+            $('[data-kt-sk-table-filter="search"]').on("keyup", function () {
+                table.search($(this).val()).draw();
+            });
+
+            $('[data-kt-user-table-filter="reset"]').on("click", function () {
+                $('[data-kt-user-table-filter="form"] select').val("").trigger("change");
+                table.search("").draw();
+            });
+
+            $('[data-kt-user-table-filter="form"] [data-kt-user-table-filter="filter"]').on("click", function () {
+                var filterString = "";
+                $('[data-kt-user-table-filter="form"] select').each(function (index) {
+                    if (this.value) {
+                        filterString += (index !== 0 ? " " : "") + this.value;
+                    }
+                });
+                table.search(filterString).draw();
+            });
+
             $('[data-kt-menu-modal-verif="close"], [data-kt-menu-modal-verif="cancel"]').on('click', function () {
                 $('#kt_modal_verif').modal('hide');
             });
