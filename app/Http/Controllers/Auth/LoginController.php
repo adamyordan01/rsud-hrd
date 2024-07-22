@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
 {
+    protected $redirectTo = '/admin/dashboard';
+
     protected function validatedLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -59,7 +61,7 @@ class LoginController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Berhasil melakukan login',
-                'redirect' => '/admin/dashboard'
+                'redirect' => session('url.intended', $this->redirectTo)
             ]);
         } else {
             return response()->json([
