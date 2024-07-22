@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\SK;
 
+use Mpdf\Mpdf;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use Endroid\QrCode\QrCode;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Endroid\QrCode\Color\Color;
 use Illuminate\Support\Facades\DB;
 use Endroid\QrCode\Builder\Builder;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Encoding\Encoding;
@@ -19,7 +23,8 @@ use Illuminate\Support\Facades\Validator;
 use Intervention\Image\ImageManagerStatic as Image;
 use Endroid\QrCode\Label\Alignment\LabelAlignmentCenter;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
-use Illuminate\Support\Facades\Log;
+// use Barryvdh\DomPDF\PDF;
+// use \Mpdf\Mpdf;
 
 class SKController extends Controller
 {
@@ -568,6 +573,358 @@ class SKController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function printPerjanjianKerja($urut, $tahun)
+    {
+        $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
+
+        $results = DB::table('hrd_sk_pegawai_kontrak as sk')
+            ->join('view_tampil_karyawan as k', 'sk.kd_karyawan', '=', 'k.kd_karyawan')
+            ->select(
+                'k.kd_karyawan', 
+                'k.gelar_depan', 
+                'k.nama', 
+                'k.gelar_belakang', 
+                'k.tempat_lahir', 
+                'k.tgl_lahir', 
+                'k.jenis_kelamin', 
+                'k.jenjang_didik', 
+                'k.jurusan', 
+                'sk.no_sk', 
+                'sk.tgl_sk', 
+                'sk.tahun_sk', 
+                'sk.tgl_ttd', 
+                'sk.no_per_kerja', 
+                DB::raw("datename(dw, sk.tgl_sk) as hari_ttd"), 
+                'k.no_ktp', 
+                'k.sub_detail'
+            )
+            ->where('sk.urut', $urut)
+            ->where('sk.tahun_sk', $tahun)
+            ->orderBy('k.ruangan', 'desc')
+            ->orderBy('k.kd_karyawan', 'asc')
+            ->first();
+
+        $direktur = DB::table('view_tampil_karyawan as vk')
+            ->join('hrd_golongan as g', 'vk.kd_gol_sekarang', '=', 'g.kd_gol')
+            ->select('vk.*', 'g.alias_gol as golongan')
+            ->where('vk.kd_jabatan_struktural', 1)
+            ->where('vk.status_peg', 1)
+            ->first();
+
+        // im using this package composer require mpdf/mpdf
+        $pdf = new MPDF([
+            'mode' => 'utf-8',
+            'format' => [215, 330],
+            'orientation' => 'P',
+            'default_font_size' => 11,
+            'default_font' => 'bookman-old-style',
+            'fontDir' => public_path('assets/fonts/'),
+            'fontdata' => [
+                'bookman-old-style' => [
+                    'R' => 'Bookman Old Style Regular.ttf',
+                    'B' => 'Bookman Old Style Bold.ttf',
+                    'I' => 'Bookman Old Style Italic.ttf',
+                    'BI' => 'Bookman Old Style Bold Italic.ttf'
+                ]
+            ]
+        ]);
+
+        $pdf->addPage('P', '', '', '', '', 15, 15, 5, 15, 5, 5);
+
+        $html = view('sk.perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        // footer from view
+        $pdf->SetHTMLFooter(view('sk.footer-perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render());
+
+        $pdf->WriteHTML($html);
+
+        // tambah halaman baru page-2
+        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+
+        $html = view('sk.perjanjian-kerja-page-2', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        $pdf->WriteHTML($html);
+
+        // tambah halaman baru page-3
+        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+        
+        $html = view('sk.perjanjian-kerja-page-3', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        $pdf->WriteHTML($html);
+
+        // tambah halaman baru page-4
+        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+
+        $html = view('sk.perjanjian-kerja-page-4', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        $pdf->WriteHTML($html);
+
+        $pdf->Output('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf', 'I');
+    }
+
+    public function old_dompdf_printPerjanjianKerja($urut, $tahun)
+    {
+        $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
+
+        $results = DB::table('hrd_sk_pegawai_kontrak as sk')
+            ->join('view_tampil_karyawan as k', 'sk.kd_karyawan', '=', 'k.kd_karyawan')
+            ->select(
+                'k.kd_karyawan', 
+                'k.gelar_depan', 
+                'k.nama', 
+                'k.gelar_belakang', 
+                'k.tempat_lahir', 
+                'k.tgl_lahir', 
+                'k.jenis_kelamin', 
+                'k.jenjang_didik', 
+                'k.jurusan', 
+                'sk.no_sk', 
+                'sk.tgl_sk', 
+                'sk.tahun_sk', 
+                'sk.tgl_ttd', 
+                'sk.no_per_kerja', 
+                DB::raw("datename(dw, sk.tgl_sk) as hari_ttd"), 
+                'k.no_ktp', 
+                'k.sub_detail'
+            )
+            ->where('sk.urut', $urut)
+            ->where('sk.tahun_sk', $tahun)
+            ->orderBy('k.ruangan', 'desc')
+            ->orderBy('k.kd_karyawan', 'asc')
+            ->first();
+
+        $direktur = DB::table('view_tampil_karyawan as vk')
+            ->join('hrd_golongan as g', 'vk.kd_gol_sekarang', '=', 'g.kd_gol')
+            ->select('vk.*', 'g.alias_gol as golongan')
+            ->where('vk.kd_jabatan_struktural', 1)
+            ->where('vk.status_peg', 1)
+            ->first();
+
+        // $data = [
+        //     'results' => $results,
+        //     'direktur' => $getDirektur,
+        //     'tahun' => $tahun,
+        //     'logoLangsa' => $logoLangsa,
+        // ];
+
+        $html = view('sk.perjanjian-kerja', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+
+        // 21.5 x 33 cm
+        $customPaperSize = [
+            0, 0, 215*2.83, 330*2.83
+        ];
+
+        // $pdf = Pdf::loadView('sk.perjanjian-kerja', compact('results', 'direktur', 'tahun', 'logoLangsa'))->setPaper($customPaperSize, 'portrait');
+
+        // use App Container
+        $pdf = App::make('dompdf.wrapper');
+        $perjanjianPdf = $pdf->setOption([
+            'dpi' => 150,
+        ]);
+
+        // set paper size
+        $perjanjianPdf = $pdf->loadHTML($html)->setPaper($customPaperSize, 'portrait');
+
+        return $pdf->stream('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf');
+        
+
+        // return $pdf->stream('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf');
+    }
+
+    // public function surat_sakit($id)
+    // {
+    //     $data = SuratKeterangan::where('jenis_surat', 'surat_sakit')->where('kode', $id)->with('dokter', 'pasien')->first();
+
+    //     if (!$data){
+    //         return response()->json('Surat Keterangan tidak ditemukan');
+    //     }
+
+    //     $user = User::where('dokter_id', $data->dokter_id)->with('profil')->first();
+    //     $file_ttd = $user->profil?->file_ttd;
+    //     $terbilang = $this->terbilang($data->surat_jumlah_hari);
+    //     $website = Website::first();
+    //     $klinik = Klinik::where('id', $user->klinik_id)->with('kota')->first();
+    //     $kecamatan = $klinik->kota?->nama_kota;
+    //     $kecamatan = str_replace('KABUPATEN ', '', $kecamatan);
+    //     $kecamatan = str_replace('KOTA ', '', $kecamatan);
+    //     $hari_tanggal = Carbon::parse($data->tanggal_pemeriksaan)->isoFormat('dddd, D MMMM Y');
+    //     $tanggal_surat = Carbon::parse($data->tanggal_surat)->isoFormat('D MMMM Y');
+    //     $tanggal_mulai = Carbon::parse($data->tanggal_mulai)->isoFormat('D MMMM Y');
+    //     $tanggal_berakhir = Carbon::parse($data->tanggal_berakhir)->isoFormat('D MMMM Y');
+
+    //     if ($data){
+    //         if ($klinik->id === 4){
+    //             // $qrcode = $user->profil?->qrcode;
+    //             $file_ttd = $user->profil?->file_foto_ttd;
+    //             $html = view('admin.pdf.surat_sakit_mopoli',[
+    //                 'data' => $data,
+    //                 'terbilang' => $terbilang,
+    //                 'klinik' => $klinik,
+    //                 'kecamatan_klinik' => $kecamatan,
+    //                 'file_ttd' => $file_ttd,
+    //                 'hari_tanggal' => $hari_tanggal,
+    //                 'tanggal_surat' => $tanggal_surat,
+    //                 'tanggal_mulai' => $tanggal_mulai,
+    //                 'tanggal_berakhir' => $tanggal_berakhir,
+    //                 // 'qrcode' => $qrcode,
+    //                 'file_ttd' => $file_ttd,
+    //             ])->render();
+    //         } else {
+    //             if ($klinik->template_surat == 3){
+    //                 $html = view('admin.pdf.surat_sakit_ketiga',[
+    //                     'data' => $data,
+    //                     'terbilang' => $terbilang,
+    //                     'website' => $website,
+    //                     'klinik' => $klinik,
+    //                     'kecamatan_klinik' => $kecamatan,
+    //                     'file_ttd' => $file_ttd,
+    //                     'hari_tanggal' => $hari_tanggal,
+    //                     'tanggal_surat' => $tanggal_surat,
+    //                     'tanggal_mulai' => $tanggal_mulai,
+    //                     'tanggal_berakhir' => $tanggal_berakhir,
+    //                 ])->render();
+    //             } else {
+    //                 $html = view('admin.pdf.surat_sakit',[
+    //                     'data' => $data,
+    //                     'terbilang' => $terbilang,
+    //                     'website' => $website,
+    //                     'klinik' => $klinik,
+    //                     'kecamatan_klinik' => $kecamatan,
+    //                     'file_ttd' => $file_ttd,
+    //                 ])->render();
+    //             }
+    //         }
+
+            
+    //         $pdf = App::make('dompdf.wrapper');
+    //         $invPDF = $pdf->setOption([
+    //             'dpi' => 150,
+    //             'defaultFont' => 'Arial'
+    //         ]);
+    //         $invPDF = $pdf->loadHTML($html);
+    //         return $pdf->stream('SURAT KETERANGAN SAKIT.pdf');
+    //     } else {
+    //         return response()->json('Data tidak ditemukan');
+    //     }
+    // }
+
+    public function old_printPerjanjianKerja($urut, $tahun)
+    {
+        $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
+
+        // select k.KD_KARYAWAN, k.GELAR_DEPAN, k.NAMA, k.GELAR_BELAKANG, k.TEMPAT_LAHIR, k.TGL_LAHIR, k.JENIS_KELAMIN, k.JENJANG_DIDIK, k.JURUSAN, sk.NO_SK, sk.TGL_SK, sk.TAHUN_SK, sk.TGL_TTD, sk.NO_PER_KERJA, datename(dw,sk.TGL_SK) as HARI_TTD, k.NO_KTP, k.SUB_DETAIL from HRD_SK_PEGAWAI_KONTRAK sk inner join VIEW_TAMPIL_KARYAWAN k on sk.KD_KARYAWAN = k.KD_KARYAWAN where sk.URUT = '172' and sk.TAHUN_SK = '2024' order by k.ruangan desc, k.KD_KARYAWAN asc
+        $results = DB::table('hrd_sk_pegawai_kontrak as sk')
+            ->join('view_tampil_karyawan as k', 'sk.kd_karyawan', '=', 'k.kd_karyawan')
+            ->select(
+                'k.kd_karyawan', 
+                'k.gelar_depan', 
+                'k.nama', 
+                'k.gelar_belakang', 
+                'k.tempat_lahir', 
+                'k.tgl_lahir', 
+                'k.jenis_kelamin', 
+                'k.jenjang_didik', 
+                'k.jurusan', 
+                'sk.no_sk', 
+                'sk.tgl_sk', 
+                'sk.tahun_sk', 
+                'sk.tgl_ttd', 
+                'sk.no_per_kerja', 
+                DB::raw("datename(dw, sk.tgl_sk) as hari_ttd"), 
+                'k.no_ktp', 
+                'k.sub_detail'
+            )
+            ->where('sk.urut', $urut)
+            ->where('sk.tahun_sk', $tahun)
+            ->orderBy('k.ruangan', 'desc')
+            ->orderBy('k.kd_karyawan', 'asc')
+            ->first();
+
+            // dd($results);
+
+        
+        // $getSk = DB::table('hrd_sk_pegawai_kontrak as sk')
+        //     ->join('view_tampil_karyawan as vk', 'sk.kd_karyawan', '=', 'vk.kd_karyawan')
+        //     ->select(
+        //         'vk.kd_karyawan', 'vk.gelar_depan', 'vk.nama', 'vk.gelar_belakang', 'vk.tempat_lahir', 'vk.tgl_lahir', 'vk.jenis_kelamin', 'vk.jenjang_didik', 'vk.jurusan', 'sk.tahun_sk', 'sk.tgl_sk', 'sk.no_sk', 'sk.tgl_ttd', 'sk.no_per_kerja'
+        //     )
+        //     ->where('sk.urut', $urut)
+        //     ->where('sk.tahun_sk', $tahun)
+        //     ->orderBy('vk.ruangan', 'desc')
+        //     ->orderBy('vk.kd_karyawan', 'asc')
+        // ->first();
+        // dd($getSk);
+        
+        $getDirektur = DB::table('view_tampil_karyawan as vk')
+            ->join('hrd_golongan as g', 'vk.kd_gol_sekarang', '=', 'g.kd_gol')
+            ->select('vk.*', 'g.alias_gol as golongan')
+            ->where('vk.kd_jabatan_struktural', 1)
+            ->where('vk.status_peg', 1)
+            ->first();
+
+        $data = [
+            'results' => $results,
+            'direktur' => $getDirektur,
+            'tahun' => $tahun,
+            'logoLangsa' => $logoLangsa,
+        ];
+
+        // untuk halaman pertama margin atas 5, margin kanan 15, margin bawah 15, margin kiri 15 dan margin header 5, margin footer 5, kemudian untuk halaman kedua margin atas 15, margin kanan 15, margin bawah 15, margin kiri 15 dan margin header 5, margin footer 5
+        $pdf = \PDF::loadView('sk.perjanjian-kerja-page-1', $data, [], [
+            'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
+            'orientation' => 'P',
+            'margin_top' => 5,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+            // font size 11pt
+            'default_font_size' => 11,
+            'default_font' => 'bookman-old-style',
+            'custom_font_dir' => base_path('public/assets/fonts/'),
+            'custom_font_data' => [
+                'bookman-old-style' => [
+                    'R' => 'Bookman Old Style Regular.ttf',
+                    'B' => 'Bookman Old Style Bold.ttf',
+                    'I' => 'Bookman Old Style Italic.ttf',
+                    'BI' => 'Bookman Old Style Bold Italic.ttf'
+                ]
+            ]
+        ]);
+
+        $pdf->getMpdf()->AddPageByArray([
+            'margin_top' => 15,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 15,
+            'margin_footer' => 5,
+        ]);
+        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-2', $data)->render());
+
+        // page 3
+        $pdf->getMpdf()->AddPageByArray([
+            'margin_top' => 15,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 15,
+            'margin_footer' => 5,
+        ]);
+        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-3', $data)->render());
+
+        // page 4
+        $pdf->getMpdf()->AddPageByArray([
+            'margin_top' => 15,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 15,
+            'margin_footer' => 5,
+        ]);
+        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-4', $data)->render());
+
+
+        return $pdf->stream('Perjanjian Kerja-' . $results->kd_karyawan . '-' . $results->no_per_kerja . '-' . $tahun . '.pdf');
     }
 
     private function sendPdfForSignatures($pdfFilePath, $passphrase, $urut, $tahun, $kd_karyawan)
