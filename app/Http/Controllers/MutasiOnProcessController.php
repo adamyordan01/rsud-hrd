@@ -29,6 +29,7 @@ class MutasiOnProcessController extends Controller
         $getMutasi = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 1)
+            ->orderBy('kd_mutasi', 'desc')
             ->groupBy('kd_mutasi')
             ->get();
             // print_r($getMutasi);
@@ -69,12 +70,16 @@ class MutasiOnProcessController extends Controller
             ]);
 
         if ($update) {
+            $this->logSuccess($kd_mutasi, 'Verifikasi 1', 'Nota Mutasi berhasil diverifikasi oleh Kasubbag. Kepegawaian');
+
             return response()->json([
                 'code' => 200,
                 'status' => 'success',
                 'message' => 'Nota Mutasi berhasil diverifikasi oleh Kasubbag. Kepegawaian'
             ]);
         } else {
+            $this->logFailed($kd_mutasi, 'Verifikasi 1', 'Nota Mutasi gagal diverifikasi oleh Kasubbag. Kepegawaian');
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
@@ -98,12 +103,16 @@ class MutasiOnProcessController extends Controller
             ]);
 
         if ($update) {
+            $this->logSuccess($kd_mutasi, 'Verifikasi 2', 'Nota Mutasi berhasil diverifikasi oleh Kabag. TU.');
+
             return response()->json([
                 'code' => 200,
                 'status' => 'success',
                 'message' => 'Nota Mutasi berhasil diverifikasi oleh Kabag. TU.'
             ]);
         } else {
+            $this->logFailed($kd_mutasi, 'Verifikasi 2', 'Nota Mutasi gagal diverifikasi oleh Kabag. TU.');
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
@@ -127,12 +136,16 @@ class MutasiOnProcessController extends Controller
             ]);
 
         if ($update) {
+            $this->logSuccess($kd_mutasi, 'Verifikasi 3', 'Nota Mutasi berhasil diverifikasi oleh Wadir. ADM dan Umum.');
+
             return response()->json([
                 'code' => 200,
                 'status' => 'success',
                 'message' => 'Nota Mutasi berhasil diverifikasi oleh Wadir. ADM dan Umum.'
             ]);
         } else {
+            $this->logFailed($kd_mutasi, 'Verifikasi 3', 'Nota Mutasi gagal diverifikasi oleh Wadir. ADM dan Umum.');
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
@@ -146,7 +159,10 @@ class MutasiOnProcessController extends Controller
         $kd_karyawan = $request->kd_karyawan;
         $kd_mutasi = $request->kd_mutasi;
 
-        $update = DB::table('hrd_r_mutasi')
+        DB::beginTransaction();
+
+        try {
+            $update = DB::table('hrd_r_mutasi')
             ->where('kd_karyawan', $kd_karyawan)
             ->where('kd_mutasi', $kd_mutasi)
             ->update([
@@ -155,17 +171,24 @@ class MutasiOnProcessController extends Controller
                 'waktu_verif_4' => Carbon::now()
             ]);
 
-        if ($update) {
+            $this->logSuccess($kd_mutasi, 'Verifikasi 4', 'Nota Mutasi berhasil diverifikasi oleh Direktur.');
+
+            DB::commit();
+
             return response()->json([
                 'code' => 200,
                 'status' => 'success',
                 'message' => 'Nota Mutasi berhasil diverifikasi oleh Direktur.'
             ]);
-        } else {
+        } catch (\Exception $e) {
+            $this->logFailed($kd_mutasi, 'Verifikasi 4', 'Nota Mutasi gagal diverifikasi oleh Direktur.' . $e->getMessage());
+
+            DB::rollBack();
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
-                'message' => 'Nota Mutasi gagal diverifikasi oleh Direktur.'
+                'message' => 'Nota Mutasi gagal diverifikasi oleh Direktur. ' . $e->getMessage()
             ]);
         }
     }
@@ -175,6 +198,8 @@ class MutasiOnProcessController extends Controller
         $kd_mutasi = $request->kd_mutasi;
         $kd_karyawan = $request->kd_karyawan;
         $passphrase = $request->passphrase;
+
+        DB::beginTransaction();
 
         try {
             $no_nota = $this->getNotaNumber($kd_karyawan);
@@ -247,26 +272,59 @@ class MutasiOnProcessController extends Controller
             $printSkData = json_decode($printSkResponse->getContent(), true);
 
             if ($printSkData['original']['code'] == 200) {
+                $this->logSuccess($kd_mutasi, 'Finalisasi', 'Nota Mutasi berhasil ditanda tangani secara digital.');
+
+                DB::commit();
+
                 return response()->json([
                     'code' => 200,
                     'status' => 'success',
                     'message' => 'Nota Mutasi berhasil ditanda tangani secara digital.'
                 ]);
             } else {
+                $message = $printSkData['original']['message'] ?? 'Gagal menandatangani nota mutasi secara digital.';
+                // $this->logFailed($kd_mutasi, 'Finalisasi', $message);
+                DB::table('hrd_log_mutasi')
+                    ->insert([
+                        'kd_mutasi' => $kd_mutasi,
+                        'kd_karyawan' => $kd_karyawan,
+                        'tahap' => 'Finalisasi',
+                        'keterangan' => $message,
+                        'user' => auth()->user()->kd_karyawan,
+                        'waktu' => Carbon::now()
+                    ]);
+                
+                DB::rollBack();
+
                 return response()->json([
                     'code' => 500,
                     'status' => 'error',
-                    'message' => 'Nota Mutasi gagal ditanda tangani secara digital.'
-                ]);
+                    'message' => 'Nota Mutasi gagal ditanda tangani secara digital. ' . $printSkData['original']['message']
+                ], 400);
             }
 
         } catch (\Exception $e) {
+            // $this->logFailed($kd_mutasi, 'Finalisasi', 'Nota Mutasi gagal ditanda tangani secara digital.' . $e->getMessage());
+            $message = $e->getMessage() ?? 'Gagal menandatangani nota mutasi secara digital.';
+            // $this->logFailed($kd_mutasi, 'Finalisasi', $message);
+            DB::table('hrd_log_mutasi')
+                ->insert([
+                    'kd_mutasi' => $kd_mutasi,
+                    'kd_karyawan' => $kd_karyawan,
+                    'tahap' => 'Finalisasi',
+                    'keterangan' => $message,
+                    'user' => auth()->user()->kd_karyawan,
+                    'waktu' => Carbon::now()
+                ]);
+            
+            DB::rollBack();
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
                 'message' => $e->getMessage(),
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
@@ -671,6 +729,30 @@ class MutasiOnProcessController extends Controller
 
         $qrImage->insert($logoImage, 'center');
         $qrImage->save($path);
+    }
+
+    private function logSuccess($kd_mutasi, $action, $message)
+    {
+        DB::table('hrd_log_mutasi')
+            ->insert([
+                'mutasi_id' => $kd_mutasi,
+                'user_id' => auth()->user()->kd_karyawan,
+                'aksi' => $action,
+                'pesan' => $message,
+                'waktu' => Carbon::now()
+            ]);
+    }
+
+    private function logFailed($kd_mutasi, $action, $message)
+    {
+        DB::table('hrd_log_mutasi')
+            ->insert([
+                'mutasi_id' => $kd_mutasi,
+                'user_id' => auth()->user()->kd_karyawan,
+                'aksi' => $action,
+                'pesan' => $message,
+                'waktu' => Carbon::now()
+            ]);
     }
 
     public function getLogMutasi(Request $request) {
