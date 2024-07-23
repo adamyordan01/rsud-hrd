@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 class MutasiController extends Controller
 {
+    public function __construct()
+    {
+        // waktu asia jakarta
+        date_default_timezone_set('Asia/Jakarta');   
+    }
+
     public function index()
     {
         $jabatanStruktural = DB::table('hrd_jabatan_struktural')
@@ -98,6 +104,8 @@ class MutasiController extends Controller
                 'kd_jenis_mutasi' => 1
             ]);
 
+        $this->logSuccess($idMutasi, 'Tambah Nota', 'Berhasil menambahkan data mutasi');
+
         
         $totalMutasiPending = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
@@ -151,6 +159,8 @@ class MutasiController extends Controller
                 'user_update' => auth()->user()->kd_karyawan,
                 'tgl_update' => $now
             ]);
+
+        $this->logSuccess($kdMutasi, 'Proses Mutasi', 'Berhasil memproses data mutasi');
 
         // return response json dan redirect ke halaman daftar mutasi proses
         return response()->json([
@@ -254,6 +264,8 @@ class MutasiController extends Controller
                 'tgl_update' => $now
             ]);
 
+        $this->logSuccess($kdMutasi, 'Edit Nota', 'Berhasil mengedit data mutasi');
+
         return response()->json([
             'code' => 1,
             'message' => "Berhasil menyimpan data mutasi dengan Id: {$kdMutasi}"
@@ -355,6 +367,8 @@ class MutasiController extends Controller
                 'tgl_update' => $now
             ]);
 
+        $this->logSuccess($kdMutasi, 'Update Nota', 'Berhasil mengupdate data mutasi');
+
         return response()->json([
             'code' => 1,
             'message' => "Berhasil menyimpan data mutasi dengan Id: {$kdMutasi}"
@@ -390,6 +404,30 @@ class MutasiController extends Controller
             'message' => "Berhasil menghapus data mutasi dengan Id: {$id}",
             'total_mutasi_pending' => $totalMutasiPending
         ]);
+    }
+
+    private function logSuccess($kd_mutasi, $action, $message)
+    {
+        DB::table('hrd_log_mutasi')
+            ->insert([
+                'mutasi_id' => $kd_mutasi,
+                'user_id' => auth()->user()->kd_karyawan,
+                'aksi' => $action,
+                'pesan' => $message,
+                'waktu' => Carbon::now()
+            ]);
+    }
+
+    private function logFailed($kd_mutasi, $action, $message)
+    {
+        DB::table('hrd_log_mutasi')
+            ->insert([
+                'mutasi_id' => $kd_mutasi,
+                'user_id' => auth()->user()->kd_karyawan,
+                'aksi' => $action,
+                'pesan' => $message,
+                'waktu' => Carbon::now()
+            ]);
     }
 
     public function checkPegawai($id)
