@@ -274,8 +274,22 @@
                                                                 Menunggu verifikasi Wadir ADM dan Umum
                                                             </a>
                                                         @endif
+                                                        @if ($jabatan == 1 || $ruangan == 57)
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                class="btn btn-success btn-sm d-block mb-2"
+                                                                title="Menunggu verifikasi Direktur"
+                                                                data-id="{{ $data->kd_mutasi }}"
+                                                                data-karyawan="{{ $data->kd_karyawan }}"
+                                                                data-url="{{ route('admin.mutasi-on-process.fourth-verification') }}"
+                                                                id="verif4"
+                                                            >
+                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i>
+                                                                Menunggu verifikasi Direktur
+                                                            </a>
+                                                        @endif
                                                     @elseif($data->verif_4 == null)
-                                                        @if ($jabatan == 3 || $ruangan == 57)
+                                                        @if ($jabatan == 1 || $ruangan == 57)
                                                             <a
                                                                 href="javascript:void(0)"
                                                                 class="btn btn-success btn-sm d-block mb-2"
@@ -966,7 +980,7 @@
                             $('#kd_karyawan').val(kd_karyawan);
 
                             if (response.code == 200) {
-                                console.log('Success execute the sweet alert');
+                                // console.log('Success execute the sweet alert');
                                 toastr.success(response.message, 'Success');
 
                                 // tutup modal finalisasi, kemudian setelah 1.5 detik reload halaman
@@ -981,14 +995,19 @@
                         error: function(xhr) {
                             Swal.close();
                             // console.log(xhr);
+                            var response = xhr.responseJSON;
 
                             if (xhr.status === 419) {
                                 refreshCsrfToken().done(function () {
                                     toastr.error('Token CSRF kadaluarsa, silahkan tekan tombol simpan kembali', 'Token CSRF Kadaluarsa');
                                 })
+                            } else if (xhr.status === 400) {
+                                if (response && response.message && response.message.includes('Passphrase anda salah')) {
+                                    toastr.error('Passphrase (Kata Sandi TTE) anda salah', 'Error');
+                                } else {
+                                    toastr.error(response.message || 'Terjadi kesalahan saat melakukan proses TTE SK', 'Error');
+                                }
                             } else if (xhr.status === 500) {
-                                var response = xhr.responseJSON;
-
                                 if (response && response.message && response.message.includes('Passphrase anda salah')) {
                                     toastr.error('Passphrase (Kata Sandi TTE) anda salah', 'Error');
                                 } else {
