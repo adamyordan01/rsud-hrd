@@ -16,14 +16,14 @@ License: For each use you must have a valid license purchased only from above li
 	<!--begin::Head-->
 	<head>
 <base href="../../../" />
-		<title>Metronic - The World's #1 Selling Bootstrap Admin Template by KeenThemes</title>
+		<title>HRD - Login</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta property="og:url" content="https://keenthemes.com/metronic" />
-		<meta property="og:site_name" content="Metronic by Keenthemes" />
+		<meta property="og:url" content="https://e-rsud.langsakota.go.id/rsud_hrd/login" />
+		<meta property="og:site_name" content="RSUD Langsa" />
 		<!--csrf-token-->
 		<meta name="csrf-token" content="{{ csrf_token() }}">
-		<link rel="canonical" href="https://preview.keenthemes.com/metronic8" />
+		<link rel="canonical" href="" />
 		<link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
 		<!--begin::Fonts(mandatory for all pages)-->
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />

@@ -56,13 +56,20 @@ class LoginController extends Controller
         $user = User::where($field, $kd_karyawan)->first();
 
         if ($user && $password == $user->password) {
-            Auth::login($user);
-            $request->session()->regenerate();
-            return response()->json([
-                'success' => true,
-                'message' => 'Berhasil melakukan login',
-                'redirect' => session('url.intended', $this->redirectTo)
-            ]);
+            if ($user->status_peg == 1) {
+                Auth::login($user);
+                $request->session()->regenerate();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Berhasil melakukan login',
+                    'redirect' => session('url.intended', $this->redirectTo)
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['login' => 'Akun anda sudah tidak aktif']
+                ]);
+            }
         } else {
             return response()->json([
                 'success' => false,
