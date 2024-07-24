@@ -11,6 +11,7 @@ class KaryawanController extends Controller
 {
     public function index()
     {
+        // dd(request()->jenis_tenaga);
         if (request()->ajax()) {
             $karyawan = DB::connection('sqlsrv')
                 ->table('hrd_karyawan')
@@ -29,8 +30,13 @@ class KaryawanController extends Controller
                     $join->on('hrd_karyawan.kd_sub_detail_jenis_tenaga', 'hrd_jenis_tenaga_sub_detail.kd_sub_detail');
                 })
                 ->where('hrd_karyawan.status_peg', '1')
-                ->get()
             ;
+
+            if (request()->has('jenis_tenaga') && request()->jenis_tenaga != 'all') {
+                $karyawan->where('hrd_karyawan.kd_status_kerja', request()->jenis_tenaga);
+            }
+
+            $karyawan = $karyawan->get();
 
             // return DataTables::of($karyawan)->toJson();
 
