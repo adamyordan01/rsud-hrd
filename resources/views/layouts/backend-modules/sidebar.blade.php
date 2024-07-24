@@ -319,6 +319,11 @@
                                 <i class="ki-duotone ki-arrows-loop fs-2"><span class="path1"></span><span class="path2"></span></i>
                             </span>
                             <span class="menu-title">Mutasi</span>
+                            <span class="menu-badge">
+                                <span class="badge badge-light-danger">
+                                    {{ $totalMutasiOnProcess }}
+                                </span>
+                            </span>
                         </a>
                     </div>
                 @else
