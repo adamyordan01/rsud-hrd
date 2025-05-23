@@ -1,21 +1,35 @@
 <?php
 
 use Endroid\QrCode\Logo\Logo;
+use App\Models\SuratIzinPraktik;
+use App\Models\SuratTandaRegistrasi;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\QRController;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\BsreController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\SK\SKController;
 use App\Http\Controllers\LokasiController;
 use App\Http\Controllers\MutasiController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\MigrateUserController;
+use App\Http\Controllers\Identitas\CvController;
+use App\Http\Controllers\ChangeProfileController;
 use App\Http\Controllers\MutasiPendingController;
 use App\Http\Controllers\MutasiOnProcessController;
 use App\Http\Controllers\MutasiVerifikasiController;
-use Illuminate\Support\Facades\Artisan;
+use App\Http\Controllers\SuratIzinPraktikController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\SuratTandaRegistrasiController;
+use App\Http\Controllers\Settings\JenjangPendidikanController;
+use App\Http\Controllers\Tugas_Tambahan\TugasTambahanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,11 +41,37 @@ use Illuminate\Support\Facades\Artisan;
 | contains the "web" middleware group. Now create something great!
 |
 */
-Route::get('/qr', function () {
-    return view('qr-index');
+// Route::get('/qr', function () {
+//     return view('qr-index');
+// });
+
+// fungsi untuk clear config
+Route::get('/config-cache', function () {
+    Artisan::call('config:clear');
+    return 'Config cache is cleared';
+});
+
+// buat fungsi untuk clear cache
+Route::get('/clear-cache', function () {
+    Artisan::call('cache:clear');
+    return 'Cache is cleared';
+});
+
+// buat fungsi untuk optimize clear
+Route::get('/optimize-clear', function () {
+    Artisan::call('optimize:clear');
+    return 'Optimize clear';
+});
+
+// buat fungsi untuk composer dump autoload
+Route::get('/composer-dump-autoload', function () {
+    Artisan::call('composer dump-autoload');
+    return 'Composer dump autoload';
 });
 
 // Auth::loginUsingId('000662');
+
+// Route::get('/migrate-users', MigrateUserController::class);
 
 Route::get('/', function () {
     // admin dashboard
@@ -46,6 +86,17 @@ Route::get('/refresh-csrf', function () {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login/process', [LoginController::class, 'login'])->name('login.process');
+
+    // Forgot password
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('forgot-password');
+    Route::post('/forgot-password/send-email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('forgot-password.send-email');
+
+    // Reset password
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
+
+    // Route untuk menampilkan detail karyawan yang di scan dari barcode kartu identitas KaryawanController::class showPersonal
+    Route::get('/show-personal/{id}', [KaryawanController::class, 'showPersonal'])->name('show-personal');
 });
 
 Route::get('/check-status-bsre', [BsreController::class, 'checkStatus'])->name('check-status-bsre');
@@ -59,17 +110,89 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('index');
     });
 
-    Route::name('karyawan.')->group(function () {
+    // bungkus route role dan permission didalam user-management agar saya dapat mengatur menu yang akan di tampilkan
+    Route::middleware(['permission:view_user_management'])
+        ->name('user-management.')
+        ->group(function () {
+        Route::name('roles.')->group(function () {
+            Route::get('/user-management/roles', [RoleController::class, 'index'])->name('index');
+            Route::post('/user-management/roles/store', [RoleController::class, 'store'])->name('store');
+            Route::get('/user-management/roles/show/{id}', [RoleController::class, 'show'])->name('show');
+            Route::get('/user-management/roles/edit/{id}', [RoleController::class, 'edit'])->name('edit');
+            Route::put('/user-management/roles/update/{id}', [RoleController::class, 'update'])->name('update');
+        });
+
+        Route::name('permissions.')->group(function () {
+            Route::get('/user-management/permissions', [PermissionController::class, 'index'])->name('index');
+            Route::post('/user-management/permissions/store', [PermissionController::class, 'store'])->name('store');
+            Route::get('/user-management/permissions/show/{id}', [PermissionController::class, 'show'])->name('show');
+            Route::get('/user-management/permissions/edit/{id}', [PermissionController::class, 'edit'])->name('edit');
+            Route::put('/user-management/permissions/update/{id}', [PermissionController::class, 'update'])->name('update');
+        });
+
+        Route::name('users.')->group(function () {
+            Route::get('/user-management/users', [UserController::class, 'index'])->name('index');
+            Route::get('/user-management/users/show/{id}', [UserController::class, 'show'])->name('show');
+            Route::post('/user-management/users/assign-role/{id}', [UserController::class, 'assignRole'])->name('assign-role');
+        });
+    });
+
+    // Settings/JenjangPendidikan
+    Route::prefix('settings/jenjang-pendidikan')
+        ->name('settings.')
+        ->group(function () {
+        Route::name('jenjang-pendidikan.')->group(function () {
+            Route::get('/', [JenjangPendidikanController::class, 'index'])->name('index');
+            Route::post('/store', [JenjangPendidikanController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [JenjangPendidikanController::class, 'edit'])->name('edit');
+            Route::patch('/{id}', [JenjangPendidikanController::class, 'update'])->name('update');
+            Route::delete('/{id}', [JenjangPendidikanController::class, 'destroy'])->name('destroy');
+            Route::post('update-order', [JenjangPendidikanController::class, 'updateOrder'])->name('update-order');
+        });
+    });
+
+    Route::middleware(['permission:view_karyawan'])
+        ->name('karyawan.')
+        ->group(function () {
         Route::get('/karyawan', [KaryawanController::class, 'index'])->name('index');
         Route::get('/karyawan/create', [KaryawanController::class, 'create'])->name('create');
         Route::post('/karyawan/store', [KaryawanController::class, 'store'])->name('store');
+        Route::get('/karyawan/show/{id}', [KaryawanController::class, 'show'])->name('show');
         Route::get('karyawan/jurusan/{id}', [KaryawanController::class, 'getJurusan'])->name('jurusan');
         Route::get('karyawan/edit/{id}', [KaryawanController::class, 'edit'])->name('edit');
         Route::patch('karyawan/update/{id}', [KaryawanController::class, 'update'])->name('update');
+
+        // printIdCard
+        Route::get('karyawan/identitas/print-id-card/{id}', [KaryawanController::class, 'printIdCard'])->name('print-id-card');
+        Route::post('karyawan/generate-print-token', [KaryawanController::class, 'generatePrintToken'])->name('generate-print-token');
+        Route::post('karyawan/upload-photo/{id}', [KaryawanController::class, 'uploadPhoto'])->name('upload-photo');
+
+        // cv karyawan/identitas/cv/{id}
+        Route::get('karyawan/identitas/cv/{id}', [CvController::class, 'show'])->name('cv');
+        // print cv
+        Route::get('karyawan/identitas/print-cv/{id}', [CvController::class, 'print'])->name('print-cv');
+
+        // STR
+        Route::get('karyawan/str/{id}', [SuratTandaRegistrasiController::class, 'index'])->name('str.index');
+        // public function getStrData($id)
+        Route::get('karyawan/str/get-str-data/{id}', [SuratTandaRegistrasiController::class, 'getStrData'])->name('str.get-str-data');
+        Route::post('karyawan/str/store/{id}', [SuratTandaRegistrasiController::class, 'store'])->name('str.store');
+        Route::get('karyawan/str/edit/{id}/{urut}', [SuratTandaRegistrasiController::class, 'edit'])->name('str.edit');
+        Route::patch('karyawan/str/update/{id}/{urut}', [SuratTandaRegistrasiController::class, 'update'])->name('str.update');
+
+        // SIP
+        Route::get('karyawan/sip/{id}', [SuratIzinPraktikController::class, 'index'])->name('sip.index');
+        Route::get('karyawan/sip/get-sip-data/{id}', [SuratIzinPraktikController::class, 'getSipData'])->name('sip.get-sip-data');
+        Route::post('karyawan/sip/store/{id}', [SuratIzinPraktikController::class, 'store'])->name('sip.store');
+        Route::get('karyawan/sip/edit/{id}/{urut}', [SuratIzinPraktikController::class, 'edit'])->name('sip.edit');
+        Route::patch('karyawan/sip/update/{id}/{urut}', [SuratIzinPraktikController::class, 'update'])->name('sip.update');
     });
 
-    Route::name('sk-kontrak.')->group(function () {
+    Route::middleware(['permission:view_sk_karyawan'])
+        ->name('sk-kontrak.')
+        ->group(function () {
         Route::get('/sk-kontrak',[SKController::class, 'index'])->name('index');
+        Route::get('/sk-kontrak/datatable', [SKController::class, 'datatable'])->name('datatable');
         Route::post('/sk-kontrak/store', [SKController::class, 'store'])->name('store');
         Route::post('/sk-kontrak/first-verification', [SKController::class, 'firstVerification'])->name('first-verification');
         Route::post('/sk-kontrak/second-verification', [SKController::class, 'secondVerification'])->name('second-verification');
@@ -82,14 +205,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/sk-kontrak/print-perjanjian-kerja/{urut}/{tahun}', [SKController::class, 'printPerjanjianKerja'])->name('print-perjanjian-kerja');
     });
 
-    Route::name('mutasi.')->group(function () {
+    Route::middleware(['permission:view_mutasi_karyawan'])
+        ->name('mutasi.')
+        ->group(function () {
         Route::get('/mutasi', [MutasiController::class, 'index'])->name('index');
+        Route::get('/mutasi/tugas-tambahan', [MutasiController::class, 'tugasTambahan'])->name('tugas-tambahan');
         Route::post('/mutasi/store', [MutasiController::class, 'store'])->name('store');
         Route::post('/mutasi/store-mutasi-nota', [MutasiController::class, 'storeMutasiNota'])->name('store-mutasi-nota');
-        Route::get('/mutasi/{id}/edit-mutasi-nota-on-pending', [MutasiController::class, 'editMutasiOnPending'])->name('edit-mutasi-nota-on-pending');
-        Route::patch('/mutasi/{id}/update-mutasi-nota-on-pending', [MutasiController::class, 'updateMutasiOnPending'])->name('update-mutasi-nota-on-pending');
-        Route::get('/mutasi/{id}/edit-mutasi-nota-on-process', [MutasiController::class, 'editMutasiOnProcess'])->name('edit-mutasi-nota-on-process');
-        Route::patch('/mutasi/{id}/update-mutasi-nota-on-process', [MutasiController::class, 'updateMutasiOnProcess'])->name('update-mutasi-nota-on-process');
+        Route::get('/mutasi/{id}/{jenis_mutasi}/edit-mutasi-nota-on-pending', [MutasiController::class, 'editMutasiOnPending'])->name('edit-mutasi-nota-on-pending');
+        Route::patch('/mutasi/{id}/{jenis_mutasi}/update-mutasi-nota-on-pending', [MutasiController::class, 'updateMutasiOnPending'])->name('update-mutasi-nota-on-pending');
+        Route::get('/mutasi/{id}/{jenis_mutasi}/edit-mutasi-nota-on-process', [MutasiController::class, 'editMutasiOnProcess'])->name('edit-mutasi-nota-on-process');
+        Route::patch('/mutasi/{id}/{jenis_mutasi}/update-mutasi-nota-on-process', [MutasiController::class, 'updateMutasiOnProcess'])->name('update-mutasi-nota-on-process');
         Route::delete('/mutasi/delete-mutasi-nota/{id}', [MutasiController::class, 'deleteMutasiNota'])->name('delete-mutasi-nota');
         Route::get('/mutasi/check-pegawai/{id}', [MutasiController::class, 'checkPegawai'])->name('check-pegawai');
         Route::get('/mutasi/list-mutasi-nota/{id}', [MutasiController::class, 'listMutasiNota'])->name('list-mutasi-nota');
@@ -97,8 +223,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/mutasi/get-sub-unit-kerja/{id}/{divisi}', [MutasiController::class, 'getSubUnitKerja'])->name('get-sub-unit-kerja');
     });
 
-    Route::name('mutasi-on-process.')->group(function () {
+    Route::middleware(['permission:view_mutasi_on_process'])
+        ->name('mutasi-on-process.')
+        ->group(function () {
         Route::get('/mutasi-on-process', [MutasiOnProcessController::class, 'index'])->name('index');
+        // datatable
+        Route::get('/mutasi-on-process/datatable', [MutasiOnProcessController::class, 'datatable'])->name('datatable');
         Route::post('/mutasi-on-process/first-verification', [MutasiOnProcessController::class, 'firstVerification'])->name('first-verification');
         Route::post('/mutasi-on-process/second-verification', [MutasiOnProcessController::class, 'secondVerification'])->name('second-verification');
         Route::post('/mutasi-on-process/third-verification', [MutasiOnProcessController::class, 'thirdVerification'])->name('third-verification');
@@ -107,17 +237,56 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/mutasi-on-process/rincian', [MutasiOnProcessController::class, 'rincian'])->name('rincian');
         Route::get('/mutasi-on-process/get-log-mutasi', [MutasiOnProcessController::class, 'getLogMutasi'])->name('get-log-mutasi');
 
-        // public function printDraftSk($kd_karyawan, $kd_mutasi)
-        Route::get('/mutasi-on-process/print-draft-sk/{kd_karyawan}/{kd_mutasi}', [MutasiOnProcessController::class, 'printDraftSk'])->name('print-draft-sk');
+        // public function printDraftSk($kd_karyawan, $kd_mutasi, $kd_jenis_mutasi)
+        Route::get('/mutasi-on-process/print-draft-sk/{kd_karyawan}/{kd_mutasi}/{kd_jenis_mutasi}', [MutasiOnProcessController::class, 'printDraftSk'])->name('print-draft-sk');
     });
 
-    Route::name('mutasi-pending.')->group(function () {
+    Route::middleware(['permission:view_mutasi_pending'])
+        ->name('mutasi-pending.')
+        ->group(function () {
         Route::get('/mutasi-pending', [MutasiPendingController::class, 'index'])->name('index');
     });
 
-    Route::name('mutasi-verifikasi.')->group(function () {
+    Route::middleware(['permission:view_mutasi_verifikasi'])
+        ->name('mutasi-verifikasi.')
+        ->group(function () {
         Route::get('/mutasi-verifikasi', [MutasiVerifikasiController::class, 'index'])->name('index');
     });
+    
+    Route::name('tugas-tambahan.')->group(function () {
+        Route::get('/tugas-tambahan', [TugasTambahanController::class, 'index'])->name('index');
+        // Route::get('/tugas-tambahan/create', [TugasController::class, 'create'])->name('create');
+        Route::post('/tugas-tambahan/store', [TugasTambahanController::class, 'store'])->name('store');
+        // Route::get('/tugas-tambahan/edit/{id}', [TugasController::class, 'edit'])->name('edit');
+        // Route::patch('/tugas-tambahan/update/{id}', [TugasController::class, 'update'])->name('update');
+        Route::post('/tugas-tambahan/first-verification', [TugasTambahanController::class, 'firstVerifivation'])->name('first-verification');
+        Route::post('/tugas-tambahan/second-verification', [TugasTambahanController::class, 'secondVerification'])->name('second-verification');
+        Route::post('/tugas-tambahan/third-verification', [TugasTambahanController::class, 'thirdVerification'])->name('third-verification');
+        Route::post('/tugas-tambahan/fourth-verification', [TugasTambahanController::class, 'fourthVerification'])->name('fourth-verification');
+        Route::post('/tugas-tambahan/finalisasi', [TugasTambahanController::class, 'finalisasi'])->name('finalisasi');
+        // batalFinalisasi
+        Route::post('/tugas-tambahan/batal-finalisasi', [TugasTambahanController::class, 'batalFinalisasi'])->name('batal-finalisasi');
+        Route::get('/tugas-tambahan/rincian', [TugasTambahanController::class, 'rincian'])->name('rincian');
+        Route::get('/tugas-tambahan/get-karyawan', [TugasTambahanController::class, 'getKaryawan'])->name('get-karyawan');
+        // print draft nota
+        Route::get('/tugas-tambahan/print-draft-nota/{kd_karyawan}/{kd_tugas_tambahan}', [TugasTambahanController::class, 'printDraftNota'])->name('print-draft-nota');
+    });
+});
+
+// changePassword
+Route::post('/change-password', [ChangeProfileController::class, 'changePassword'])
+    ->name('change-password')
+    ->middleware('auth');
+
+
+// Route milik user
+// User routes dengan middleware auth dan role.redirect
+Route::middleware(['auth', 'role.redirect'])->prefix('user')->name('user.')->group(function () {
+    Route::name('dashboard.')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'userDashboard'])->name('index');
+    });
+    
+    // Tambahkan route khusus user di sini
 });
 
 
