@@ -24,11 +24,19 @@ use App\Http\Controllers\ChangeProfileController;
 use App\Http\Controllers\MutasiPendingController;
 use App\Http\Controllers\MutasiOnProcessController;
 use App\Http\Controllers\MutasiVerifikasiController;
+use App\Http\Controllers\Settings\RuanganController;
 use App\Http\Controllers\SuratIzinPraktikController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Riwayat\BpjsKetenagakerjaanController;
+use App\Http\Controllers\Riwayat\KeluargaController;
+use App\Http\Controllers\Riwayat\KemampuanBahasaController;
+use App\Http\Controllers\Settings\BahasaController;
+use App\Http\Controllers\Settings\HubunganKeluargaController;
 use App\Http\Controllers\SuratTandaRegistrasiController;
 use App\Http\Controllers\Settings\JenjangPendidikanController;
+use App\Http\Controllers\Settings\JurusanController;
+use App\Http\Controllers\Settings\PekerjaanController;
 use App\Http\Controllers\Tugas_Tambahan\TugasTambahanController;
 
 /*
@@ -149,6 +157,46 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{id}', [JenjangPendidikanController::class, 'destroy'])->name('destroy');
             Route::post('update-order', [JenjangPendidikanController::class, 'updateOrder'])->name('update-order');
         });
+
+        // Ruangan
+        Route::name('ruangan.')->group(function () {
+            Route::get('/ruangan', [RuanganController::class, 'index'])->name('index');
+            Route::post('/ruangan/store', [RuanganController::class, 'store'])->name('store');
+            Route::get('/ruangan/{id}/edit', [RuanganController::class, 'edit'])->name('edit');
+            Route::patch('/ruangan/{id}', [RuanganController::class, 'update'])->name('update');
+        });
+
+        // Pekerjaan
+        Route::name('pekerjaan.')->group(function () {
+            Route::get('/pekerjaan', [PekerjaanController::class, 'index'])->name('index');
+            Route::post('/pekerjaan/store', [PekerjaanController::class, 'store'])->name('store');
+            Route::get('/pekerjaan/{id}/edit', [PekerjaanController::class, 'edit'])->name('edit');
+            Route::patch('/pekerjaan/{id}', [PekerjaanController::class, 'update'])->name('update');
+        });
+
+        // Pekerjaan
+        Route::name('hubungan_keluarga.')->group(function () {
+            Route::get('/hubungan_keluarga', [HubunganKeluargaController::class, 'index'])->name('index');
+            Route::post('/hubungan_keluarga/store', [HubunganKeluargaController::class, 'store'])->name('store');
+            Route::get('/hubungan_keluarga/{id}/edit', [HubunganKeluargaController::class, 'edit'])->name('edit');
+            Route::patch('/hubungan_keluarga/{id}', [HubunganKeluargaController::class, 'update'])->name('update');
+        });
+
+        // Jurusan
+        Route::name('jurusan.')->group(function () {
+            Route::get('/jurusan', [JurusanController::class, 'index'])->name('index');
+            Route::post('/jurusan/store', [JurusanController::class, 'store'])->name('store');
+            Route::get('/jurusan/{id}/edit', [JurusanController::class, 'edit'])->name('edit');
+            Route::patch('/jurusan/{id}', [JurusanController::class, 'update'])->name('update');
+        });
+
+        // Bahasa
+        Route::name('bahasa.')->group(function () {
+            Route::get('/bahasa', [BahasaController::class, 'index'])->name('index');
+            Route::post('/bahasa/store', [BahasaController::class, 'store'])->name('store');
+            Route::get('/bahasa/{id}/edit', [BahasaController::class, 'edit'])->name('edit');
+            Route::patch('/bahasa/{id}', [BahasaController::class, 'update'])->name('update');
+        });
     });
 
     Route::middleware(['permission:view_karyawan'])
@@ -186,6 +234,30 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('karyawan/sip/store/{id}', [SuratIzinPraktikController::class, 'store'])->name('sip.store');
         Route::get('karyawan/sip/edit/{id}/{urut}', [SuratIzinPraktikController::class, 'edit'])->name('sip.edit');
         Route::patch('karyawan/sip/update/{id}/{urut}', [SuratIzinPraktikController::class, 'update'])->name('sip.update');
+
+        // BPJS Ketenagakerjaan
+        Route::get('karyawan/bpjs-ketenagakerjaan/{id}', [BpjsKetenagakerjaanController::class, 'index'])->name('bpjs-ketenagakerjaan.index');
+        Route::get('karyawan/bpjs-ketenagakerjaan/get-data/{id}', [BpjsKetenagakerjaanController::class, 'getData'])->name('bpjs-ketenagakerjaan.get-data');
+        Route::post('karyawan/bpjs-ketenagakerjaan/store/{id}', [BpjsKetenagakerjaanController::class, 'store'])->name('bpjs-ketenagakerjaan.store');
+        Route::get('karyawan/bpjs-ketenagakerjaan/edit/{id}/{urut}', [BpjsKetenagakerjaanController::class, 'edit'])->name('bpjs-ketenagakerjaan.edit');
+        Route::patch('karyawan/bpjs-ketenagakerjaan/update/{id}/{urut}', [BpjsKetenagakerjaanController::class, 'update'])->name('bpjs-ketenagakerjaan.update');
+
+        // Keluarga
+        Route::get('karyawan/keluarga/{id}', [KeluargaController::class, 'index'])->name('keluarga.index');
+        Route::get('karyawan/keluarga/get-data/{id}', [KeluargaController::class, 'getData'])->name('keluarga.get-data');
+        Route::post('karyawan/keluarga/store/{id}', [KeluargaController::class, 'store'])->name('keluarga.store');
+        Route::post('karyawan/keluarga/reorder/{id}', [KeluargaController::class, 'reorder'])->name('keluarga.reorder');
+        Route::get('karyawan/keluarga/edit/{id}/{urut}', [KeluargaController::class, 'edit'])->name('keluarga.edit');
+        Route::patch('karyawan/keluarga/update/{id}/{urut}', [KeluargaController::class, 'update'])->name('keluarga.update');
+        Route::delete('karyawan/keluarga/delete/{id}/{urut}', [KeluargaController::class, 'destroy'])->name('keluarga.destroy');
+
+        // Kemampuan Bahasa
+        Route::get('karyawan/kemampuan-bahasa/{id}', [KemampuanBahasaController::class, 'index'])->name('kemampuan-bahasa.index');
+        Route::get('karyawan/kemampuan-bahasa/get-data/{id}', [KemampuanBahasaController::class, 'getData'])->name('kemampuan-bahasa.get-data');
+        Route::post('karyawan/kemampuan-bahasa/store/{id}', [KemampuanBahasaController::class, 'store'])->name('kemampuan-bahasa.store');
+        Route::get('karyawan/kemampuan-bahasa/edit/{id}/{urut}', [KemampuanBahasaController::class, 'edit'])->name('kemampuan-bahasa.edit');
+        Route::patch('karyawan/kemampuan-bahasa/update/{id}/{urut}', [KemampuanBahasaController::class, 'update'])->name('kemampuan-bahasa.update');
+        Route::delete('karyawan/kemampuan-bahasa/delete/{id}/{urut}', [KemampuanBahasaController::class, 'destroy'])->name('kemampuan-bahasa.destroy');
     });
 
     Route::middleware(['permission:view_sk_karyawan'])
