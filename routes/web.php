@@ -37,6 +37,7 @@ use App\Http\Controllers\SuratTandaRegistrasiController;
 use App\Http\Controllers\Settings\JenjangPendidikanController;
 use App\Http\Controllers\Settings\JurusanController;
 use App\Http\Controllers\Settings\PekerjaanController;
+use App\Http\Controllers\Settings\TenagaManagementController;
 use App\Http\Controllers\Tugas_Tambahan\TugasTambahanController;
 
 /*
@@ -197,6 +198,32 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/bahasa/{id}/edit', [BahasaController::class, 'edit'])->name('edit');
             Route::patch('/bahasa/{id}', [BahasaController::class, 'update'])->name('update');
         });
+
+        // Tenaga Management
+        Route::prefix('tenaga-management')
+            ->name('tenaga-management.')
+            ->group(function () {
+                Route::get('/', [TenagaManagementController::class, 'index'])->name('index');
+
+                // API Routes untuk cascade dropdown
+                Route::get('api/details/{jenisId}', [TenagaManagementController::class, 'getDetails'])->name('api.details');
+                Route::get('api/sub-details/{detailId}', [TenagaManagementController::class, 'getSubDetails'])->name('api.sub-details');
+
+                // Jenis Tenaga (Level 1) CRUD
+                Route::post('jenis-tenaga', [TenagaManagementController::class, 'storeJenisTenaga'])->name('jenis-tenaga.store');
+                Route::patch('jenis-tenaga/{id}', [TenagaManagementController::class, 'updateJenisTenaga'])->name('jenis-tenaga.update');
+                Route::delete('jenis-tenaga/{id}', [TenagaManagementController::class, 'destroyJenisTenaga'])->name('jenis-tenaga.destroy');
+
+                // Jenis Tenaga Detail (Level 2) CRUD
+                Route::post('detail', [TenagaManagementController::class, 'storeDetail'])->name('detail.store');
+                Route::patch('detail/{jenisId}/{detailId}', [TenagaManagementController::class, 'updateDetail'])->name('detail.update');
+                Route::delete('detail/{jenisId}/{detailId}', [TenagaManagementController::class, 'destroyDetail'])->name('detail.destroy');
+
+                // Jenis Tenaga Sub Detail (Level 3) CRUD
+                Route::post('sub-detail', [TenagaManagementController::class, 'storeSubDetail'])->name('sub-detail.store');
+                Route::patch('sub-detail/{jenisId}/{detailId}/{subDetailId}', [TenagaManagementController::class, 'updateSubDetail'])->name('sub-detail.update');
+                Route::delete('sub-detail/{jenisId}/{detailId}/{subDetailId}', [TenagaManagementController::class, 'destroySubDetail'])->name('sub-detail.destroy');
+            });
     });
 
     Route::middleware(['permission:view_karyawan'])
