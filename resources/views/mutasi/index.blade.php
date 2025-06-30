@@ -58,6 +58,7 @@
                 @csrf
                 <input type="hidden" name="kd_mutasi_form" id="kd_mutasi_form" value="">
                 <input type="hidden" name="kd_karyawan_form" id="kd_karyawan_form" value="">
+                <input type="hidden" name="jenis_mutasi" id="jenis_mutasi" value="{{ $jenisMutasi }}">
                 <div class="card mb-5">
                     <div class="card-body p-lg-12">
                         <div class="row g-5 mb-5">
@@ -440,7 +441,8 @@
                     type: "GET",
                     dataType: "json",
                     data: {
-                        id: e.target.value
+                        id: e.target.value,
+                        jenis_mutasi: $('#jenis_mutasi').val()
                     },
                     cache: false,
                     success: function(response) {
@@ -460,6 +462,7 @@
         $('#kd_karyawan').keypress(function (e) {
             if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
                 var kd_karyawan = $(this).val();
+                var jenis_mutasi = $('#jenis_mutasi').val();
                 e.preventDefault();
                 console.log("keypressed");
 
@@ -468,7 +471,8 @@
                     url: "{{ route('admin.mutasi.store-mutasi-nota') }}",
                     dataType: "json",
                     data: {
-                        kd_karyawan: kd_karyawan
+                        kd_karyawan: kd_karyawan,
+                        jenis_mutasi: jenis_mutasi
                     },
                     success: function (response) {
                         console.log(response);

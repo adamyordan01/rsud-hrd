@@ -91,12 +91,12 @@
         use App\Helpers\HijriDateHelper;
         use App\Helpers\Denominator;
 
-        // $tanggal = (int) date('d', strtotime($results->tgl_sk));
-        // var_dump(date('d', strtotime($results->tgl_sk)));
+        // $tanggal = (int) date('d', strtotime($result->tgl_sk));
+        // var_dump(date('d', strtotime($result->tgl_sk)));
         // var_dump($tanggal);
         // die;
 
-        // buat hari, tanggal, bulan, tahun dalam bentuk seperti tanggal senin tujuh januari dua ribu dua puluh empat dari $results->tgl_sk
+        // buat hari, tanggal, bulan, tahun dalam bentuk seperti tanggal senin tujuh januari dua ribu dua puluh empat dari $result->tgl_sk
         // $hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         // $bulan = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
 
@@ -122,18 +122,18 @@
         //     }
         // }
 
-        // $hari_ttd = tanggal_indo($results->tgl_sk);
+        // $hari_ttd = tanggal_indo($result->tgl_sk);
 
-        // $cetak_hari = $hari[date('w', strtotime($results->tgl_sk))];
-        // $cetak_bulan = $bulan[date('m', strtotime($results->tgl_sk))];
+        // $cetak_hari = $hari[date('w', strtotime($result->tgl_sk))];
+        // $cetak_bulan = $bulan[date('m', strtotime($result->tgl_sk))];
 
         $gelar_depan_direktur = $direktur->gelar_depan ? $direktur->gelar_depan . ' ' : '';
         $gelar_belakang_direktur = $direktur->gelar_belakang ? $direktur->gelar_belakang : '';
         $nama_direktur = $gelar_depan_direktur . $direktur->nama . $gelar_belakang_direktur;
 
-        $gelar_depan_karyawan = $results->gelar_depan ? $results->gelar_depan . ' ' : '';
-        $gelar_belakang_karyawan = $results->gelar_belakang ? $results->gelar_belakang : '';
-        $nama_karyawan = $gelar_depan_karyawan . $results->nama . $gelar_belakang_karyawan;
+        $gelar_depan_karyawan = $result->gelar_depan ? $result->gelar_depan . ' ' : '';
+        $gelar_belakang_karyawan = $result->gelar_belakang ? $result->gelar_belakang : '';
+        $nama_karyawan = $gelar_depan_karyawan . $result->nama . $gelar_belakang_karyawan;
     @endphp
     
     <div class="all">

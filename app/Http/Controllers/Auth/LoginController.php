@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
@@ -50,19 +51,74 @@ class LoginController extends Controller
         }
 
         $kd_karyawan = $request->input('login');
-        $password = md5($request->input('password'));
+        $password = $request->input('password');
 
-        $field = filter_var($kd_karyawan, FILTER_VALIDATE_EMAIL) ? 'EMAIL' : 'KD_KARYAWAN';
-        $user = User::where($field, $kd_karyawan)->first();
+        $field = filter_var($kd_karyawan, FILTER_VALIDATE_EMAIL) ? 'email' : 'kd_karyawan';
+        $user = User::with('karyawan')->where($field, $kd_karyawan)->first();
 
-        if ($user && $password == $user->password) {
-            if ($user->status_peg == 1) {
+        if ($user && Hash::check($password, $user->password)) {
+            if ($user->is_active == 1) {
+                // Cek apakah user memiliki role
+                if ($user->roles->isEmpty()) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => ['login' => 'Akses Anda belum diatur. Silahkan hubungi admin untuk mendapatkan bantuan.']
+                    ]);
+                }
+                
+                Auth::login($user);
+                $request->session()->regenerate();
+                
+                // Tentukan redirect berdasarkan role
+                $redirectPath = $user->hasRole('pegawai_biasa') && $user->roles->count() === 1 
+                    ? route('user.dashboard.index')
+                    : route('admin.dashboard.index');
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Berhasil melakukan login',
+                    'redirect' => $redirectPath
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['login' => 'Akun anda sudah tidak aktif']
+                ]);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'errors' => ['login' => 'Kode karyawan atau password salah']
+            ]);
+        }
+    }
+
+    public function old_login(Request $request)
+    {
+        $validator = $this->validatedLogin($request);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $kd_karyawan = $request->input('login');
+        $password = $request->input('password');
+
+        $field = filter_var($kd_karyawan, FILTER_VALIDATE_EMAIL) ? 'email' : 'kd_karyawan';
+        // $user = User::where($field, $kd_karyawan)->first();
+        $user = User::with('karyawan')->where($field, $kd_karyawan)->first();
+
+        if ($user && Hash::check($password, $user->password)) {
+            if ($user->is_active == 1) {
                 Auth::login($user);
                 $request->session()->regenerate();
                 return response()->json([
                     'success' => true,
                     'message' => 'Berhasil melakukan login',
-                    'redirect' => session('url.intended', $this->redirectTo)
+                    // 'redirect' => session('url.intended', $this->redirectTo)
+                    'redirect' => $this->redirectTo
                 ]);
             } else {
                 return response()->json([

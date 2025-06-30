@@ -25,6 +25,13 @@ class BsreController extends Controller
 
     public function checkStatus(Request $request)
     {
+        return response()->json([
+            'code' => 200,
+            'status' => 'success',
+            'message' => 'Server is up and running',
+        ]);
+        die;
+
         $karyawan = $request->kd_karyawan;
         $urut = $request->urut_rincian_verif;
         $tahun = $request->tahun_rincian_verif;

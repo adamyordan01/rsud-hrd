@@ -41,7 +41,7 @@
                 <!--begin::Menu wrapper-->
                 @php
                     // Ambil nama user
-                    $userNama = auth()->user()->nama;
+                    $userNama = auth()->user()->name;
 
                     // Pisahkan nama menjadi array berdasarkan spasi
                     $namaArray = explode(' ', $userNama);
@@ -86,7 +86,7 @@
                             <!--begin::Avatar-->
                             <div class="symbol symbol-50px me-5">
                                 <img
-                                    alt="{{ auth()->user()->nama }}"
+                                    alt="{{ auth()->user()->karyawan->nama }}"
                                     src="{{ $avatar }}"
                                 />
                             </div>
@@ -95,16 +95,11 @@
                             <!--begin::Username-->
                             <div class="d-flex flex-column">
                                 <div class="fw-bold d-flex align-items-center fs-5">
-                                    {{ auth()->user()->nama }}
-                                    <span
-                                        class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2"
-                                    >
-                                        Pro
-                                    </span>
+                                    {{ auth()->user()->karyawan->nama }}
                                 </div>
 
                                 <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">
-                                    {{ auth()->user()->kd_karyawan }} - {{ auth()->user()->email }}
+                                    {{ auth()->user()->karyawan->kd_karyawan }} - {{ auth()->user()->karyawan->email }}
                                 </a>
                             </div>
                             <!--end::Username-->
@@ -123,6 +118,12 @@
                         </a>
                     </div>
                     <!--end::Menu item-->
+                    
+                    <div class="menu-item px-5">
+                        <a href="{{ route('admin.karyawan.surat-izin.index') }}" class="menu-link px-5">
+                            Surat Izin
+                        </a>
+                    </div>
 
                     <!--begin::Menu item-->
                     <div class="menu-item px-5">
@@ -193,93 +194,12 @@
                         <!--end::Menu-->
 
                     </div>
-                    <!--end::Menu item-->
-
-                    <!--begin::Menu item-->
-                    {{-- <div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
-                        data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
-                        <a href="#" class="menu-link px-5">
-                            <span class="menu-title position-relative">
-                                Language
-
-                                <span
-                                    class="fs-8 rounded bg-light px-3 py-2 position-absolute translate-middle-y top-50 end-0">
-                                    English <img class="w-15px h-15px rounded-1 ms-2"
-                                        src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
-                                </span>
-                            </span>
-                        </a>
-
-                        <!--begin::Menu sub-->
-                        <div class="menu-sub menu-sub-dropdown w-175px py-4">
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/settings.html" class="menu-link d-flex px-5 active">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img class="rounded-1"
-                                            src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
-                                    </span>
-                                    English
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/settings.html" class="menu-link d-flex px-5">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img class="rounded-1" src="{{ asset('assets/media/flags/spain.svg') }}"
-                                            alt="" />
-                                    </span>
-                                    Spanish
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/settings.html" class="menu-link d-flex px-5">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img class="rounded-1" src="{{ asset('assets/media/flags/germany.svg') }}"
-                                            alt="" />
-                                    </span>
-                                    German
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/settings.html" class="menu-link d-flex px-5">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img class="rounded-1" src="{{ asset('assets/media/flags/japan.svg') }}"
-                                            alt="" />
-                                    </span>
-                                    Japanese
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="/metronic8/demo39/account/settings.html" class="menu-link d-flex px-5">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img class="rounded-1" src="{{ asset('assets/media/flags/france.svg') }}"
-                                            alt="" />
-                                    </span>
-                                    French
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                        </div>
-                        <!--end::Menu sub-->
-                    </div> --}}
-                    <!--end::Menu item-->
+                    
 
                     <!--begin::Menu item-->
                     <div class="menu-item px-5 my-1">
-                        <a href="#" class="menu-link px-5">
-                            Account Settings
+                        <a href="javascript:void(0);" class="menu-link px-5" id="change-password">
+                            Ubah Password
                         </a>
                     </div>
                     <!--end::Menu item-->

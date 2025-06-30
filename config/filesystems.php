@@ -65,6 +65,14 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
         ],
 
+        // Disk khusus untuk HRD
+        'hrd_files' => [
+            'driver' => 'local',
+            'root' => env('HRD_FILES_PATH', base_path('../storage_files/hrd')),
+            'url' => env('HRD_FILES_URL', env('APP_URL').'/storage_files/hrd'),
+            'visibility' => 'private',
+        ],
+
     ],
 
     /*

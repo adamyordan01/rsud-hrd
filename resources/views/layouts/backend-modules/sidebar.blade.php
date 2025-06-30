@@ -411,6 +411,54 @@
                     @endif
                 @endif
 
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.laporan.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-filter-tablet fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Laporan</span><span class="menu-arrow"></span>
+                    </span>
+                    
+                    <div class="menu-sub menu-sub-accordion">
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.duk.*')) active @endif"
+                                href="{{ route('admin.laporan.duk.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Daftar Urut Kepangkatan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.pns-usia.*')) active @endif"
+                                href="{{ route('admin.laporan.pns-usia.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Daftar PNS per Usia</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.struktural.*')) active @endif"
+                                href="{{ route('admin.laporan.struktural.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Daftar Struktural</span>
+                            </a>
+                        </div>
+                    </div>
+                    <!--end:Menu sub-->
+                </div>
+
                 <!-- user management -->
                 @hasPermission('view_user_management')
                     <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.user-management.*') ? 'here show' : '' }}">
@@ -486,32 +534,73 @@
                                     <span class="menu-title">Jenjang Pendidikan</span>
                             </a>
                         </div>
-
-                        @hasPermission('view_permissions')
+                        
                         <div class="menu-item">
                             <a 
-                                class="menu-link @if (request()->routeIs('admin.user-management.permissions.*')) active @endif"
-                                href="{{ route('admin.user-management.permissions.index') }}">
+                                class="menu-link @if (request()->routeIs('admin.settings.ruangan.*')) active @endif"
+                                href="{{ route('admin.settings.ruangan.index') }}">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
-                                    <span class="menu-title">Permission</span>
+                                    <span class="menu-title">Ruangan</span>
                             </a>
                         </div>
-                        @endhasPermission
+                        
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.jurusan.*')) active @endif"
+                                href="{{ route('admin.settings.jurusan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jurusan</span>
+                            </a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.tenaga-management.*')) active @endif"
+                                href="{{ route('admin.settings.tenaga-management.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Tenaga Management</span>
+                            </a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.pekerjaan.*')) active @endif"
+                                href="{{ route('admin.settings.pekerjaan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Pekerjaan</span>
+                            </a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.hubungan_keluarga.*')) active @endif"
+                                href="{{ route('admin.settings.hubungan_keluarga.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Hubungan Keluarga</span>
+                            </a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.bahasa.*')) active @endif"
+                                href="{{ route('admin.settings.bahasa.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Bahasa</span>
+                            </a>
+                        </div>
 
-                        @hasPermission('view_users')
-                            <div class="menu-item">
-                                <a 
-                                    class="menu-link @if (request()->routeIs('admin.user-management.users.*')) active @endif"
-                                    href="{{ route('admin.user-management.users.index') }}">
-                                        <span class="menu-bullet">
-                                            <span class="bullet bullet-dot"></span>
-                                        </span>
-                                        <span class="menu-title">Users</span>
-                                </a>
-                            </div>
-                        @endhasPermission
                     </div>
                     <!--end:Menu sub-->
                 </div>

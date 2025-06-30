@@ -144,37 +144,41 @@
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="/metronic8/demo1/account/activity.html">
-                        Pendidikan 
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.pendidikan.index')) active @endif" 
+                        href="{{ route('admin.karyawan.pendidikan.index', $karyawan->kd_karyawan) }}"
+                    >
+                        Pendidikan
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.riwayat-kerja.index')) active @endif" 
+                        href="{{ route('admin.karyawan.riwayat-kerja.index', $karyawan->kd_karyawan) }}"
+                    >
+                        Riwayat Pekerjaan
                     </a>
                 </li>
                 <li class="nav-item mt-2">
                     <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="/metronic8/demo1/account/billing.html">
-                        Riwayat Pekerjaan 
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="/metronic8/demo1/account/statements.html">
+                        href="#">
                         Riwayat Organisasi 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
                     <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="/metronic8/demo1/account/referrals.html">
+                        href="#">
                         Penghargaan 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
                     <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="/metronic8/demo1/account/api-keys.html">
+                        href="#">
                         Seminar 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 " href="/metronic8/demo1/account/logs.html">
+                    <a class="nav-link text-active-primary ms-0 me-10 py-5 " href="#">
                         Tugas 
                     </a>
                 </li>

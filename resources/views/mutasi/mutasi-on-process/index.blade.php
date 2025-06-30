@@ -3,8 +3,8 @@
 @inject('DB', 'Illuminate\Support\Facades\DB')
 
 @php
-    $jabatan = Auth::user()->kd_jabatan_struktural;
-    $ruangan = Auth::user()->kd_ruangan;
+    $jabatan = Auth::user()->karyawan->kd_jabatan_struktural;
+    $ruangan = Auth::user()->karyawan->kd_ruangan;
 @endphp
 
 @push('styles')
@@ -43,71 +43,7 @@
 @section('content')
     <div id="kt_app_content" class="app-content  flex-column-fluid ">
         <div id="kt_app_content_container" class="app-container  container-fluid ">
-            {{-- <div class="card-rounded bg-light d-flex flex-stack flex-wrap p-5 mb-8">
-                <div class="hover-scroll-x">
-                    <ul class="nav flex-nowrap border-transparent fw-bold">
-                        <li class="nav-item my-1">
-                            <a
-                                class="btn btn-color-gray-600 btn-active-secondary btn-active-color-primary fw-bolder fs-6 fs-lg-base nav-link px-3 px-lg-8 mx-1 text-uppercase {{ request()->routeIs('admin.mutasi.*') ? 'active' : '' }}"
-                                href="{{ route('admin.mutasi.index') }}"
-                            >
-                                <i class="ki-duotone ki-arrows-loop fs-1"><span class="path1"></span><span class="path2"></span></i>
-                                Mutasi (Nota)
-                            </a>
-                        </li>
-                        <li class="nav-item my-1">
-                            <a 
-                                class="btn btn-color-gray-600 btn-active-secondary btn-active-color-primary fw-bolder fs-6 fs-lg-base nav-link px-3 px-lg-8 mx-1 text-uppercase"
-                                href=""
-                            >
-                            <i class="ki-duotone ki-arrows-loop fs-1"><span class="path1"></span><span class="path2"></span></i>
-                            Mutasi (SK)
-                            </a>
-                        </li>
-                        <li class="nav-item my-1">
-                            <a
-                                class="btn btn-color-gray-600 btn-active-secondary btn-active-color-primary fw-bolder fs-6 fs-lg-base nav-link px-3 px-lg-8 mx-1 text-uppercase {{ request()->routeIs('admin.mutasi-pending.*') ? 'active' : '' }}"
-                                href="{{ route('admin.mutasi-pending.index') }}"
-                            >
-                            <i class="ki-duotone ki-abstract-5 fs-1"><span class="path1"></span><span class="path2"></span></i>
-                                <span class="menu-title me-2">
-                                    Daftar Mutasi (Tetunda)
-                                </span>
-                                <span class="menu-badge">
-                                    <span class="badge badge-sm badge-circle badge-danger count-status-proses">
-                                        {{ $totalMutasiPending }}
-                                    </span>
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item my-1">
-                            <a
-                                class="btn btn-color-gray-600 btn-active-secondary btn-active-color-primary fw-bolder fs-6 fs-lg-base nav-link px-3 px-lg-8 mx-1 text-uppercase {{ request()->routeIs('admin.mutasi-on-process.*') ? 'active' : '' }}"
-                                href="{{ route('admin.mutasi-on-process.index') }}"
-                            >
-                                <i class="ki-duotone ki-loading fs-1"><span class="path1"></span><span class="path2"></span></i>
-                                <span class="menu-title me-2">
-                                    Daftar Mutasi (Proses)
-                                </span>
-                                <span class="menu-badge">
-                                    <span class="badge badge-sm badge-circle badge-danger count-status-proses">
-                                        {{ $totalMutasiOnProcess }}
-                                    </span>
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item my-1">
-                            <a
-                                class="btn btn-color-gray-600 btn-active-secondary btn-active-color-primary fw-bolder fs-6 fs-lg-base nav-link px-3 px-lg-8 mx-1 text-uppercase {{ request()->routeIs('admin.mutasi-verifikasi.*') ? 'active' : '' }}"
-                                href="{{ route('admin.mutasi-verifikasi.index') }}"
-                            >
-                                <i class="ki-duotone ki-double-check fs-1"><span class="path1"></span><span class="path2"></span></i>
-                                Daftar Mutasi (Verifikasi)
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div> --}}
+
             <x-navigation-menu :totalMutasiPending="$totalMutasiPending" :totalMutasiOnProcess="$totalMutasiOnProcess" />
 
             <div class="card mb-5">
@@ -129,6 +65,7 @@
                                 <thead>
                                     <tr>
                                         <th class="text-center">Kd. Mutasi</th>
+                                        {{-- <th>Jenis Mutasi</th> --}}
                                         <th>ID Peg.</th>
                                         <th class="text-center vertical-align-middle">
                                             Nama <br>
@@ -146,205 +83,9 @@
                                             Pada Ruangan Baru
                                         </th>
                                         <th class="text-center">Status</th>
-                                        <th class="min-w-125px text-center">Aksi</th>
+                                        <th class="min-w-90px text-center">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @forelse ($getMutasi as $item)
-                                        {{-- <tr style="background: #1b84ff;"> --}}
-                                        {{-- <tr class="bg-gray-500">
-                                            <td style="vertical-align: middle" colspan="6">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="text-dark fw-bold fs-5">
-                                                        Kode Mutasi - {{ $item->kd_mutasi }}
-                                                    </span>
-                                                    <a
-                                                        href="{{ route('admin.mutasi.edit-mutasi-nota-on-process', $item->kd_mutasi) }}"
-                                                        class="btn btn-light-dark btn-sm btn-active-light-succes me-2 mb-2"
-                                                    >
-                                                        <i class="ki-duotone ki-notepad-edit fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                        Edit Mutasi Nota
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr> --}}
-
-                                        @php
-                                            // select * from VIEW_PROSES_MUTASI where KD_MUTASI = '".$dataMutasi['KD_MUTASI']."' and KD_TAHAP_MUTASI = 1
-                                            $query = $DB::table('view_proses_mutasi')
-                                                ->where('kd_mutasi', $item->kd_mutasi)
-                                                ->where('kd_tahap_mutasi', 1)
-                                                ->get();
-                                        @endphp
-
-                                        @foreach ($query as $data)
-                                            @php
-                                                $gelar_depan = $data->gelar_depan ? $data->gelar_depan . ' ' : '';
-                                                $gelar_belakang = $data->gelar_belakang ? '' . $data->gelar_belakang : '';
-                                                $nama = $gelar_depan . $data->nama . $gelar_belakang;
-
-                                                if ($data->kd_status_kerja == 1 || $data->kd_status_kerja == 7) {
-                                                    $asn = "<br>" . $data->nip_baru . "<br>" . $data->no_karpeg;
-                                                } else {
-                                                    $asn = "";
-                                                }
-                                            @endphp
-                                            <tr>
-                                                <td class="text-center">{{ $data->kd_mutasi }}</td>
-                                                <td>{{ $data->kd_karyawan }}</td>
-                                                <td>
-                                                    {{ $nama }} <br>
-                                                    {{ $data->tempat_lahir }}, {{ date('d-m-Y', strtotime($data->tgl_lahir)) }}
-                                                    {!! $asn !!}
-                                                </td>
-                                                <td>
-                                                    {{ $data->jab_struk_lama }} <br>
-                                                    {{ $data->sub_detail_lama }} <br>
-                                                    {{ $data->ruangan_lama }}
-                                                </td>
-                                                <td>
-                                                    {{ $data->jab_struk_baru }} <br>
-                                                    {{ $data->sub_detail_baru }} <br>
-                                                    {{ $data->ruangan_baru }}    
-                                                </td>
-                                                <td class="text-center">
-                                                    @if ($data->verif_1 == null)
-                                                    <!--buat terdapat enter kebawah-->
-                                                        Menunggu verifikasi Kasubbag. Kepeg.
-                                                    @elseif($data->verif_2 == null)
-                                                        Menunggu verifikasi Kabag. TU
-                                                        {{-- <span class="badge badge-light-info">Menunggu verifikasi <br><br> Kabag. TU</span> --}}
-                                                    @elseif($data->verif_3 == null)
-                                                        Menunggu verifikasi Wadir ADM dan Umum
-                                                        {{-- <span class="badge badge-light-warning">Menunggu verifikasi <br><br> Wadir ADM dan Umum</span> --}}
-                                                    @elseif($data->verif_4 == null)
-                                                        Menunggu verifikasi Direktur
-                                                        {{-- <span class="badge badge-light-success">Menunggu verifikasi <br><br> Direktur</span> --}}
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if ($data->verif_1 == null)
-                                                        @if ($jabatan == 19 || $ruangan == 57)
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                class="btn btn-info btn-sm d-block mb-2"
-                                                                title="Verifikasi Ka.Sub.Bag. Kepeg."
-                                                                data-id="{{ $data->kd_mutasi }}"
-                                                                data-karyawan="{{ $data->kd_karyawan }}"
-                                                                data-url="{{ route('admin.mutasi-on-process.first-verification') }}"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#kt_modal_verif"
-                                                                id="verif1"
-                                                            >
-                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i> 
-                                                                Verifikasi Ka.Sub.Bag. Kepeg.
-                                                            </a>
-                                                        @endif
-                                                    @elseif($data->verif_2 == null)
-                                                        @if ($jabatan == 7 || $ruangan == 57)
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                class="btn btn-primary btn-sm d-block mb-2"
-                                                                title="Verifikasi Kabag. TU"
-                                                                data-id="{{ $data->kd_mutasi }}"
-                                                                data-karyawan="{{ $data->kd_karyawan }}"
-                                                                data-url="{{ route('admin.mutasi-on-process.second-verification') }}"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#kt_modal_verif"
-                                                                id="verif2"
-                                                            >
-                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i>
-                                                                Verifikasi Kabag. TU
-                                                            </a>
-                                                        @endif
-                                                    @elseif($data->verif_3 == null)
-                                                        @if ($jabatan == 3 || $ruangan == 57)
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                class="btn btn-warning btn-sm d-block mb-2"
-                                                                title="Menunggu verifikasi Wadir ADM dan Umum"
-                                                                data-id="{{ $data->kd_mutasi }}"
-                                                                data-karyawan="{{ $data->kd_karyawan }}"
-                                                                data-url="{{ route('admin.mutasi-on-process.third-verification') }}"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#kt_modal_verif"
-                                                                id="verif3"
-                                                            >
-                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i>
-                                                                Menunggu verifikasi Wadir ADM dan Umum
-                                                            </a>
-                                                        @endif
-                                                        @if ($jabatan == 1 || $ruangan == 57)
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                class="btn btn-success btn-sm d-block mb-2"
-                                                                title="Menunggu verifikasi Direktur"
-                                                                data-id="{{ $data->kd_mutasi }}"
-                                                                data-karyawan="{{ $data->kd_karyawan }}"
-                                                                data-url="{{ route('admin.mutasi-on-process.fourth-verification') }}"
-                                                                id="verif4"
-                                                            >
-                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i>
-                                                                Menunggu verifikasi Direktur
-                                                            </a>
-                                                        @endif
-                                                    @elseif($data->verif_4 == null)
-                                                        @if ($jabatan == 1 || $ruangan == 57)
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                class="btn btn-success btn-sm d-block mb-2"
-                                                                title="Menunggu verifikasi Direktur"
-                                                                data-id="{{ $data->kd_mutasi }}"
-                                                                data-karyawan="{{ $data->kd_karyawan }}"
-                                                                data-url="{{ route('admin.mutasi-on-process.fourth-verification') }}"
-                                                                id="verif4"
-                                                            >
-                                                                <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i>
-                                                                Menunggu verifikasi Direktur
-                                                            </a>
-                                                        @endif
-                                                    @endif
-
-                                                    @if ($ruangan == 91 || $ruangan == 57)
-                                                        <a
-                                                            href="{{ route('admin.mutasi.edit-mutasi-nota-on-process', $item->kd_mutasi) }}"
-                                                            class="btn btn-light-dark btn-sm d-block mb-2"
-                                                        >
-                                                            <i class="ki-duotone ki-notepad-edit fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                            Edit Mutasi Nota
-                                                        </a>
-                                                        
-                                                    @endif
-                                                    <a
-                                                        href="{{ route('admin.mutasi-on-process.print-draft-sk', [$data->kd_karyawan, $data->kd_mutasi]) }}"
-                                                        target="_blank"
-                                                        class="btn btn-primary btn-sm d-block mb-2"
-                                                    >
-                                                        <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                        Cetak Draft Nota
-                                                    </a>
-                                                    <!--lihat log-->
-                                                    <a
-                                                        href="javascript:void(0)"
-                                                        class="btn btn-secondary btn-sm d-block mb-2"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#kt_modal_log"
-                                                        data-id="{{ $data->kd_mutasi }}"
-                                                        data-karyawan="{{ $data->kd_karyawan }}"
-                                                        id="log"
-                                                    >
-                                                    <i class="ki-duotone ki-timer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
-                                                        Lihat Log
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @empty
-                                        <tr>
-                                            <td colspan="7" class="text-center">Tidak ada data</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -416,6 +157,8 @@
                         @csrf
                         <input type="hidden" name="kd_mutasi_finalisasi" id="kd_mutasi_finalisasi">
                         <input type="hidden" name="kd_karyawan_finalisasi" id="kd_karyawan_finalisasi">
+                        <!-- jenis mutasi -->
+                        <input type="hidden" name="kd_jenis_mutasi_finalisasi" id="kd_jenis_mutasi_finalisasi">
                         <div class="d-flex flex-column fv-row mb-5">
                             <label
                                 class="required fw-semibold fs-6 mb-2 d-flex align-items-center"
@@ -504,70 +247,82 @@
             }
         });
 
-        // var KTSKList = (function () {
-        //     var table,
-        //     $table = $('#mutasi-on-process-table');
-
-        //     return {
-        //         init: function () {
-        //             if ($table.length) {
-        //                 table = $table.DataTable({
-        //                     info: true,
-        //                     order: [],
-        //                     // pageLength: 10,
-        //                     displayLength: 10,
-        //                     lengthChange: true,
-        //                     columnDefs: [
-        //                         { orderable: false, targets: [0, 5] }
-        //                         // { orderable: false, targets: 7 },
-        //                     ],
-        //                 });
-
-        //                 $('[data-kt-sk-table-filter="search"]').on("keyup", function () {
-        //                     // table.search($(this).val()).draw();
-        //                     table.column(3).search($(this).val()).draw();
-        //                 });
-
-        //                 $('[data-kt-user-table-filter="reset"]').on("click", function () {
-        //                     $('[data-kt-user-table-filter="form"] select').val("").trigger("change");
-        //                     table.search("").draw();
-        //                 });
-
-        //                 $('[data-kt-user-table-filter="form"] [data-kt-user-table-filter="filter"]').on("click", function () {
-        //                     var filterString = "";
-        //                     $('[data-kt-user-table-filter="form"] select').each(function (index) {
-        //                         // if (this.value && this.value !== "") {
-        //                         //     if (index !== 0) {
-        //                         //         filterString += " ";
-        //                         //     }
-        //                         //     filterString += this.value;
-        //                         // }
-        //                         if (this.value) {
-        //                             filterString += (index !== 0 ? " " : "") + this.value;
-        //                         }
-        //                     });
-        //                     table.search(filterString).draw();
-        //                 });
-        //             }
-        //         },
-        //     };
-        // })();
+        var mutasiTable;
 
         $(document).ready(function() {
             // KTSKList.init();
 
-            var table = $('#mutasi-on-process-table').DataTable({
-                info: true,
-                order: [],
-                pageLength: 10,
-                lengthChange: true,
-                columnDefs: [
-                    { orderable: false, targets: [6] }
-                ],
+            // var table = $('#mutasi-on-process-table').DataTable({
+            //     info: true,
+            //     order: [],
+            //     pageLength: 10,
+            //     lengthChange: true,
+            //     columnDefs: [
+            //         { orderable: false, targets: [6] }
+            //     ],
+            // });
+
+            mutasiTable = $('#mutasi-on-process-table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ route('admin.mutasi-on-process.datatable') }}",
+                    type: 'GET',
+                    data: function (d) {
+                        // d.jabatan = '{{ $jabatan }}';
+                        // d.ruangan = '{{ $ruangan }}';
+                    }
+                },
+                columns: [
+                    { 
+                        data: 'kd_mutasi', 
+                        name: 'kd_mutasi', 
+                        className: 'text-center'
+                    },
+                    // { 
+                    //     data: 'jenis_mutasi', 
+                    //     name: 'kd_jenis_mutasi' 
+                    // },
+                    { 
+                        data: 'kd_karyawan', 
+                        name: 'kd_karyawan' 
+                    },
+                    { 
+                        data: 'nama', 
+                        name: 'nama' 
+                    },
+                    { 
+                        data: 'jabatan_lama', 
+                        name: 'jab_struk_lama' 
+                    },
+                    { 
+                        data: 'jabatan_baru', 
+                        name: 'jab_struk_baru' 
+                    },
+                    { 
+                        data: 'status', 
+                        name: 'verif_1', 
+                        className: 'text-center' 
+                    },
+                    { 
+                        data: 'aksi', 
+                        name: 'aksi', 
+                        orderable: false, 
+                        searchable: false,
+                        className: 'text-center' 
+                    }
+                ]
             });
 
-            $('[data-kt-sk-table-filter="search"]').on("keyup", function () {
-                table.search($(this).val()).draw();
+            // reload implementasi reload setelah verifikasi
+            function reloadDataTables() {
+                if (mutasiTable) {
+                    mutasiTable.ajax.reload(null, false); // false agar tidak reset page
+                }
+            }
+
+            $('[data-kt-sk-table-filter="search"]').on('keyup', function () {
+                mutasiTable.search($(this).val()).draw();
             });
 
             $('[data-kt-user-table-filter="reset"]').on("click", function () {
@@ -723,7 +478,10 @@
         $(document).on('click', '#verif1, #verif2, #verif3', function () {
             var id = $(this).data('id');
             var karyawan = $(this).data('karyawan');
+            var jenis_mutasi = $(this).data('jenis-mutasi');
             var url = $(this).data('url');
+
+            var form = this;
 
             let title;
 
@@ -734,16 +492,35 @@
             } else if ($(this).attr('id') === 'verif3') {
                 title = 'Verifikasi Wadir ADM dan Umum';
             }
+
+            var loadingIndicator = $('<span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>');
+
+            $(form).find('.btn-primary').append(loadingIndicator);
             
             $.ajax({
                 url: '{{ route("admin.mutasi-on-process.rincian") }}',
                 method: 'GET',
                 data: {
                     kd_mutasi: id,
-                    kd_karyawan: karyawan
+                    kd_karyawan: karyawan,
+                    jenis_mutasi: jenis_mutasi
                 },
                 beforeSend: function() {
-                    $('#rincian-verif').html('<div class="text-center"><span class="spinner-border spinner-border-lg align-center"></span></div>');
+                    // $('#rincian-verif').html('<div class="text-center"><span class="spinner-border spinner-border-lg align-center"></span></div>');
+                    loadingIndicator.show();
+                    $(form).find('.btn-primary').attr('disabled', true);
+                    $(form).find('.btn-primary .indicator-label').hide();
+
+                    // swal loading
+                    Swal.fire({
+                        title: 'Memuat data rincian',
+                        text: 'Mohon tunggu sebentar',
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
                 },
                 success: function(response) {
                     $('#rincian-verif').html(response);
@@ -758,6 +535,14 @@
                     } else if (xhr.status === 500) {
                         toastr.error('Internal Server Error', xhr.statusText);
                     }
+                },
+                complete: function() {
+                    loadingIndicator.hide();
+
+                    $(form).find('.btn-primary').attr('disabled', false);
+                    $(form).find('.btn-primary .indicator-label').show();
+
+                    Swal.close();
                 }
             });
         });
@@ -766,6 +551,7 @@
             var id = $(this).data('id');
             var karyawan = $(this).data('karyawan');
             var url = $(this).data('url');
+            var jenis_mutasi = $(this).data('jenis-mutasi');
 
             $.ajax({
                 type: 'get',
@@ -792,7 +578,8 @@
                             method: 'GET',
                             data: {
                                 kd_mutasi: id,
-                                kd_karyawan: karyawan
+                                kd_karyawan: karyawan,
+                                jenis_mutasi: jenis_mutasi
                             },
                             beforeSend: function() {
                                 $('#rincian-verif').html('<div class="text-center"><span class="spinner-border spinner-border-lg align-center"></span></div>');
@@ -813,7 +600,8 @@
                             }
                         });
                     } else {
-                        toastr.error(`${response.message}`, 'Error');
+                        // toastr.error(`${response.message}`, 'Error');
+                        toastr.error('Tidak dapat terhubung ke server BSRE, Silahkahkan hubungi penanggung jawab aplikasi HRD', 'Error');
                     }
                 },
                 error: function(xhr) {
@@ -824,6 +612,9 @@
                     } else if (xhr.status === 500) {
                         toastr.error('Internal Server Error', xhr.statusText);
                     }
+                },
+                complete: function() {
+                    Swal.close();
                 }
             });
         })
@@ -832,11 +623,11 @@
             e.preventDefault();
             var modal = $(this).closest('.modal');
             var form = modal.find('form')[0];
+            
 
             var kd_mutasi = $(form).find('input[name="kd_mutasi"]').val();
             var kd_karyawan = $(form).find('input[name="kd_karyawan"]').val();
-
-            // console.log(`kd_mutasi: ${kd_mutasi}, kd_karyawan: ${kd_karyawan}`);
+            var jenis_mutasi = $(form).find('input[name="jenis_mutasi"]').val();
 
             var data = new FormData(form);
 
@@ -876,6 +667,7 @@
                         success: function(response) {
                             $('#kd_mutasi').val(kd_mutasi);
                             $('#kd_karyawan').val(kd_karyawan);
+                            $('#jenis_mutasi').val(jenis_mutasi);
                             if (response.code == 200) {
                                 Swal.fire({
                                     icon: 'success',
@@ -928,13 +720,17 @@
             e.preventDefault();
             var kd_mutasi = $('#kd_mutasi').val();
             var kd_karyawan = $('#kd_karyawan').val();
+            var jenis_mutasi = $('#jenis_mutasi').val();
             var modal = $(this).closest('.modal');
             var form = modal.find('form')[0];
             var data = new FormData(form);
 
+            console.log(`kd_mutasi: ${kd_mutasi}, kd_karyawan: ${kd_karyawan}`);
+            
             // masukkan data urut dan tahun ke dalam form data
             data.append('kd_mutasi', kd_mutasi);
             data.append('kd_karyawan', kd_karyawan);
+            data.append('jenis_mutasi', jenis_mutasi);
 
             Swal.fire({
                 title: 'Apakah anda yakin?',
@@ -978,16 +774,25 @@
                             // $('#tahun_rincian_verif').val(tahun);
                             $('#kd_mutasi').val(kd_mutasi);
                             $('#kd_karyawan').val(kd_karyawan);
+                            $('#jenis_mutasi').val(jenis_mutasi);
 
                             if (response.code == 200) {
                                 // console.log('Success execute the sweet alert');
                                 toastr.success(response.message, 'Success');
 
                                 // tutup modal finalisasi, kemudian setelah 1.5 detik reload halaman
-                                setTimeout(() => {
-                                    $('#kt_modal_finalisasi').modal('hide');
-                                    window.location.reload();
-                                }, 1500);
+                                // setTimeout(() => {
+                                //     $('#kt_modal_finalisasi').modal('hide');
+                                //     window.location.reload();
+                                // }, 1500);
+
+                                // Tutup modal
+                                $('#kt_modal_finalisasi').modal('hide');
+
+                                // Reload DataTable tanpa me-reset halaman
+                                if (typeof mutasiTable !== 'undefined') {
+                                    mutasiTable.ajax.reload(null, false);
+                                }
                             } else {
                                 toastr.error(response.message, 'Error');
                             }
@@ -1061,6 +866,7 @@
                 var data = new FormData(form);
 
                 var loadingIndicator = $('<span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>');
+
                 $(form).find('.btn-primary').append(loadingIndicator);
 
                 Swal.fire({
@@ -1092,6 +898,17 @@
 
                                 $(form).find('.btn-primary').attr('disabled', true);
                                 $(form).find('.btn-primary .indicator-label').hide();
+
+                                // swal loading
+                                Swal.fire({
+                                    title: 'Memproses verifikasi',
+                                    text: 'Mohon tunggu sebentar',
+                                    showConfirmButton: false,
+                                    allowOutsideClick: false,
+                                    willOpen: () => {
+                                        Swal.showLoading();
+                                    }
+                                });
                             },
                             success: function(response) {
                                 if (response.code == 200) {
@@ -1103,7 +920,18 @@
                                         showConfirmButton: true,
                                     }).then((result) => {
                                         if (result.isConfirmed) {
-                                            window.location.reload();
+                                            // window.location.reload();
+                                            // reloadDataTables();
+                                            $('#kt_modal_verif').modal('hide');
+                
+                                            // Tunggu modal benar-benar tertutup
+                                            $('#kt_modal_verif').on('hidden.bs.modal', function () {
+                                                // Reload DataTables
+                                                mutasiTable.ajax.reload(null, false);
+                                                
+                                                // Hapus event listener setelah digunakan
+                                                $(this).off('hidden.bs.modal');
+                                            });
                                         }
                                     })
                                 } else {
@@ -1132,6 +960,8 @@
 
                                 $(form).find('.btn-primary').attr('disabled', false);
                                 $(form).find('.btn-primary .indicator-label').show();
+
+                                // Swal.close();
                             }
                         })
                     }

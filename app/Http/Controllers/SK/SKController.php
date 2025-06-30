@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Support\Facades\Auth;
 use Endroid\QrCode\Encoding\Encoding;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Yajra\DataTables\Facades\DataTables;
@@ -34,6 +36,389 @@ class SKController extends Controller
     }
 
     public function index(Request $request)
+    {
+        // Ambil tahun dari request atau gunakan tahun saat ini
+        $tahun = $request->query('tahun', date('Y'));
+
+        // Hitung jumlah SK untuk ditampilkan di halaman
+        $totalSk = DB::table('hrd_sk_pegawai_kontrak')
+            ->where('tahun_sk', $tahun)
+            ->distinct('urut')
+            ->count('urut');
+
+        $totalPending = DB::table('hrd_sk_pegawai_kontrak')
+            ->where('tahun_sk', $tahun)
+            ->where('verif_1', 0)
+            ->distinct('urut')
+            ->count('urut');
+
+        return view('sk.index', [
+            'totalSk' => $totalSk,
+            'totalPending' => $totalPending,
+            'tahun' => $tahun
+        ]);
+    }
+
+    public function datatable(Request $request)
+    {
+        // Ambil jabatan dan ruangan dari user yang login
+        $jabatan = Auth::user()->karyawan->kd_jabatan_struktural;
+        $ruangan = Auth::user()->karyawan->kd_ruangan;
+        $searchValue = $request->search['value'];
+        $tahun = $request->tahun ?: date('Y'); // Ambil tahun dari request atau gunakan tahun saat ini
+
+        // Subquery untuk mendapatkan kd_karyawan pertama per urut
+        $subQuery = DB::table('hrd_sk_pegawai_kontrak')
+            ->select('urut', 'kd_karyawan')
+            ->whereIn('kd_index', function ($query) use ($tahun) {
+                $query->select(DB::raw('MIN(kd_index)'))
+                    ->from('hrd_sk_pegawai_kontrak')
+                    ->where('tahun_sk', $tahun)
+                    ->groupBy('urut');
+            })
+            ->where('tahun_sk', $tahun);
+
+        // Subquery untuk join dengan view_tampil_karyawan
+        $vtkQuery = DB::table('view_tampil_karyawan as vtk')
+            ->select('vtk.kd_karyawan', 'vtk.gelar_depan', 'vtk.nama', 'vtk.gelar_belakang', 'hspk_sub.urut')
+            ->joinSub($subQuery, 'hspk_sub', function ($join) {
+                $join->on('vtk.kd_karyawan', '=', 'hspk_sub.kd_karyawan');
+            });
+
+        // Query utama
+        $query = DB::table('hrd_sk_pegawai_kontrak as hspk')
+            ->select(
+                'hspk.urut',
+                DB::raw('COUNT(hspk.kd_karyawan) as jumlah_pegawai'),
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                DB::raw("CASE 
+                            WHEN hspk.nomor_konsederan = '' THEN 
+                                COALESCE(vtk.kd_karyawan + '<br>' + ISNULL(vtk.gelar_depan, '') + ' ' + vtk.nama + ISNULL(vtk.gelar_belakang, ''), '~') 
+                            ELSE '~' 
+                        END as nama")
+            )
+            ->leftJoinSub($vtkQuery, 'vtk', function ($join) {
+                $join->on('vtk.urut', '=', 'hspk.urut');
+            })
+            ->where('hspk.tahun_sk', $tahun)
+            ->groupBy(
+                'hspk.urut',
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                'vtk.kd_karyawan',
+                'vtk.gelar_depan',
+                'vtk.nama',
+                'vtk.gelar_belakang'
+            );
+
+        // Tambahkan filter pencarian jika ada
+        if (!empty($searchValue)) {
+            $query->where(function ($q) use ($searchValue) {
+                $q->where('hspk.no_sk', 'like', "%{$searchValue}%")
+                ->orWhere('hspk.nomor_konsederan', 'like', "%{$searchValue}%");
+                
+                // Check if vtk join exists before searching those columns
+                if (Schema::hasTable('view_tampil_karyawan')) {
+                    $q->orWhere('vtk.nama', 'like', "%{$searchValue}%")
+                    ->orWhere('vtk.kd_karyawan', 'like', "%{$searchValue}%");
+                }
+            });
+        }
+
+        // Gunakan Yajra DataTables untuk memproses query
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('no_sk', function ($item) {
+                return ($item->no_sk == "") ? "-" : "Peg. 445/{$item->no_sk}/SK/{$item->tahun_sk}";
+            })
+            ->editColumn('tgl_sk', function ($item) {
+                return $item->tgl_sk ? date('d-m-Y', strtotime($item->tgl_sk)) : '';
+            })
+            ->editColumn('tgl_ttd', function ($item) {
+                return $item->tgl_ttd ? date('d-m-Y', strtotime($item->tgl_ttd)) : '';
+            })
+            ->editColumn('status', function ($item) use ($jabatan, $ruangan) {
+                return view('sk.datatables._status', compact('item', 'jabatan', 'ruangan'))->render();
+            })
+            ->addColumn('aksi', function ($item) use ($jabatan, $ruangan) {
+                return view('sk.datatables._actions', compact('item', 'jabatan', 'ruangan'))->render();
+            })
+            // Disable the global search and use only the specific search fields
+            ->filterColumn('no_sk', function($query, $keyword) {
+                $query->where('hspk.no_sk', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('nomor_konsederan', function($query, $keyword) {
+                $query->where('hspk.nomor_konsederan', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('nama', function($query, $keyword) {
+                $query->where('vtk.nama', 'like', "%{$keyword}%")
+                    ->orWhere('vtk.kd_karyawan', 'like', "%{$keyword}%");
+            })
+            ->rawColumns(['nama', 'status', 'aksi'])
+            ->make(true);
+    }
+
+    public function old_2_datatable(Request $request)
+    {
+        // Ambil jabatan dan ruangan dari user yang login
+        $jabatan = Auth::user()->karyawan->kd_jabatan_struktural;
+        $ruangan = Auth::user()->karyawan->kd_ruangan;
+        $searchValue = $request->search['value'];
+        $tahun = $request->tahun ?: date('Y'); // Ambil tahun dari request atau gunakan tahun saat ini
+
+        // Subquery untuk view_tampil_karyawan
+        $subQuery = DB::table('view_tampil_karyawan as vtk')
+            ->select('vtk.kd_karyawan', 'vtk.gelar_depan', 'vtk.nama', 'vtk.gelar_belakang', 'hspk_sub.urut')
+            ->join(DB::raw("(
+                SELECT urut, kd_karyawan
+                FROM hrd_sk_pegawai_kontrak
+                WHERE kd_index IN (
+                    SELECT MIN(kd_index)
+                    FROM hrd_sk_pegawai_kontrak
+                    WHERE tahun_sk = '{$tahun}'
+                    GROUP BY urut
+                )
+                AND tahun_sk = '{$tahun}'
+            ) hspk_sub"), 'vtk.kd_karyawan', '=', 'hspk_sub.kd_karyawan');
+
+        // Query dasar
+        $query = DB::table('hrd_sk_pegawai_kontrak as hspk')
+            ->select([
+                'hspk.urut',
+                DB::raw('COUNT(hspk.kd_karyawan) as jumlah_pegawai'),
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                DB::raw("CASE 
+                    WHEN hspk.nomor_konsederan = '' THEN 
+                        COALESCE(vtk.kd_karyawan + '<br>' + ISNULL(vtk.gelar_depan, '') + ' ' + vtk.nama + ISNULL(vtk.gelar_belakang, ''), '~') 
+                    ELSE '~' 
+                END as nama")
+            ])
+            ->leftJoin(DB::raw("({$subQuery->toSql()}) as vtk"), 'vtk.urut', '=', 'hspk.urut')
+            ->where('hspk.tahun_sk', $tahun)
+            ->groupBy(
+                'hspk.urut',
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                'vtk.kd_karyawan',
+                'vtk.gelar_depan',
+                'vtk.nama',
+                'vtk.gelar_belakang'
+            );
+
+        // Tambahkan filter pencarian jika ada
+        if (!empty($searchValue)) {
+            $query->where(function($q) use ($searchValue) {
+                $q->where('hspk.no_sk', 'like', "%{$searchValue}%")
+                ->orWhere('hspk.nomor_konsederan', 'like', "%{$searchValue}%")
+                ->orWhere('vtk.nama', 'like', "%{$searchValue}%")
+                ->orWhere('vtk.kd_karyawan', 'like', "%{$searchValue}%");
+            });
+        }
+
+        // Implementasi manual untuk total records dan filtered records
+        $countQuery = clone $query;
+        $totalRecords = $countQuery->count();
+        
+        $filteredRecords = $totalRecords; // Jika tidak ada filter tambahan
+        
+        // Hitung ulang jika ada pencarian
+        if (!empty($searchValue)) {
+            $filteredQuery = clone $query;
+            $filteredRecords = $filteredQuery->count();
+        }
+
+        // Tambahkan pengurutan dan pagination
+        $start = $request->start;
+        $length = $request->length;
+        
+        if ($request->order && isset($request->order[0])) {
+            $columnIndex = $request->order[0]['column'];
+            $columnName = $request->columns[$columnIndex]['data'];
+            $columnDir = $request->order[0]['dir'];
+            
+            // Handle pengurutan khusus
+            if ($columnName == 'status') {
+                $query->orderBy('hspk.verif_1', $columnDir);
+            } elseif ($columnName != 'aksi' && $columnName != 'nama') {
+                $query->orderBy($columnName, $columnDir);
+            } else {
+                // Default sort by urut
+                $query->orderBy('hspk.urut', 'desc');
+            }
+        } else {
+            // Default sort
+            $query->orderBy('hspk.urut', 'desc');
+        }
+        
+        // Tambahkan pagination
+        $data = $query->skip($start)->take($length)->get();
+
+        // Format data untuk response
+        $formattedData = $data->map(function($item) use ($jabatan, $ruangan) {
+            return [
+                'urut' => $item->urut,
+                'jumlah_pegawai' => $item->jumlah_pegawai,
+                'no_sk' => ($item->no_sk == "") ? "-" : "Peg. 445/{$item->no_sk}/SK/{$item->tahun_sk}",
+                'nama' => $item->nama,
+                'tgl_sk' => $item->tgl_sk ? date('d-m-Y', strtotime($item->tgl_sk)) : '',
+                'tgl_ttd' => $item->tgl_ttd ? date('d-m-Y', strtotime($item->tgl_ttd)) : '',
+                'status' => view('sk.datatables._status', compact('item', 'jabatan', 'ruangan'))->render(),
+                'aksi' => view('sk.datatables._actions', compact('item', 'jabatan', 'ruangan'))->render(),
+            ];
+        });
+
+        // Membuat response Yajra format
+        return response()->json([
+            'draw' => intval($request->draw),
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $filteredRecords,
+            'data' => $formattedData
+        ]);
+    }
+
+    public function old_datatable(Request $request)
+    {
+        // Ambil jabatan dan ruangan dari user yang login
+        $jabatan = Auth::user()->karyawan->kd_jabatan_struktural;
+        $ruangan = Auth::user()->karyawan->kd_ruangan;
+        $searchValue = $request->search['value'];
+        $tahun = $request->tahun ?: date('Y'); // Ambil tahun dari request atau gunakan tahun saat ini
+
+        // Query dasar menggunakan query gabungan
+        $query = DB::table('hrd_sk_pegawai_kontrak as hspk')
+            ->select(
+                'hspk.urut',
+                DB::raw('COUNT(hspk.kd_karyawan) as jumlah_pegawai'),
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                DB::raw("CASE 
+                            WHEN hspk.nomor_konsederan = '' THEN 
+                                COALESCE(vtk.kd_karyawan + '<br>' + ISNULL(vtk.gelar_depan, '') + ' ' + vtk.nama + ISNULL(vtk.gelar_belakang, ''), '~') 
+                            ELSE '~' 
+                         END as nama")
+            )
+            ->leftJoinSub(
+                "(
+                    SELECT vtk.kd_karyawan, vtk.gelar_depan, vtk.nama, vtk.gelar_belakang, hspk_sub.urut
+                    FROM view_tampil_karyawan vtk
+                    INNER JOIN (
+                        SELECT urut, kd_karyawan
+                        FROM hrd_sk_pegawai_kontrak
+                        WHERE kd_index IN (
+                            SELECT MIN(kd_index)
+                            FROM hrd_sk_pegawai_kontrak
+                            WHERE tahun_sk = ?
+                            GROUP BY urut
+                        )
+                        AND tahun_sk = ?
+                    ) hspk_sub ON vtk.kd_karyawan = hspk_sub.kd_karyawan
+                )",
+                'vtk',
+                'vtk.urut',
+                '=',
+                'hspk.urut',
+                [$tahun, $tahun]
+            )
+            ->where('hspk.tahun_sk', $tahun)
+            ->groupBy(
+                'hspk.urut',
+                'hspk.nomor_konsederan',
+                'hspk.tahun_sk',
+                'hspk.tgl_sk',
+                'hspk.stt',
+                'hspk.no_sk',
+                'hspk.verif_1',
+                'hspk.verif_2',
+                'hspk.verif_3',
+                'hspk.verif_4',
+                'hspk.tgl_ttd',
+                'hspk.path_dokumen',
+                'vtk.kd_karyawan',
+                'vtk.gelar_depan',
+                'vtk.nama',
+                'vtk.gelar_belakang'
+            );
+
+        // Tambahkan filter pencarian jika ada
+        if (!empty($searchValue)) {
+            $query->where(function($q) use ($searchValue) {
+                $q->where('hspk.no_sk', 'like', "%{$searchValue}%")
+                  ->orWhere('hspk.nomor_konsederan', 'like', "%{$searchValue}%")
+                  ->orWhere('vtk.nama', 'like', "%{$searchValue}%")
+                  ->orWhere('vtk.kd_karyawan', 'like', "%{$searchValue}%");
+            });
+        }
+
+        // Gunakan Yajra DataTables untuk memproses query
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('no_sk', function($item) {
+                return ($item->no_sk == "") ? "-" : "Peg. 445/{$item->no_sk}/SK/{$item->tahun_sk}";
+            })
+            ->editColumn('tgl_sk', function($item) {
+                return $item->tgl_sk ? date('d-m-Y', strtotime($item->tgl_sk)) : '';
+            })
+            ->editColumn('tgl_ttd', function($item) {
+                return $item->tgl_ttd ? date('d-m-Y', strtotime($item->tgl_ttd)) : '';
+            })
+            ->editColumn('status', function($item) use ($jabatan, $ruangan) {
+                return view('sk.datatables._status', compact('item', 'jabatan', 'ruangan'))->render();
+            })
+            ->addColumn('aksi', function($item) use ($jabatan, $ruangan) {
+                return view('sk.datatables._actions', compact('item', 'jabatan', 'ruangan'))->render();
+            })
+            ->rawColumns(['nama', 'status', 'aksi'])
+            ->make(true);
+    }
+
+    public function old_index(Request $request)
     {
         if ($request->tahun_sk) {
             $year = $request->tahun_sk;
@@ -75,6 +460,9 @@ class SKController extends Controller
             )
             ->orderBy('urut', 'desc')
         ->get();
+
+        dd($skKontrak->toArray());
+        dd($skKontrak);
 
         return view('sk.index', [
             'skKontrak' => $skKontrak,
@@ -604,7 +992,10 @@ class SKController extends Controller
             ->where('sk.tahun_sk', $tahun)
             ->orderBy('k.ruangan', 'desc')
             ->orderBy('k.kd_karyawan', 'asc')
-            ->first();
+            // ->first();
+            ->get();
+
+            // dd($results);
 
         $direktur = DB::table('view_tampil_karyawan as vk')
             ->join('hrd_golongan as g', 'vk.kd_gol_sekarang', '=', 'g.kd_gol')
@@ -631,33 +1022,69 @@ class SKController extends Controller
             ]
         ]);
 
-        $pdf->addPage('P', '', '', '', '', 15, 15, 5, 15, 5, 5);
+        foreach ($results as $result) {
+            $pdf->AddPage('P', '', '', '', '', 15, 15, 5, 15, 5, 5);
 
-        $html = view('sk.perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
-        // footer from view
-        $pdf->SetHTMLFooter(view('sk.footer-perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render());
+            $html = view('sk.perjanjian-kerja-page-1', compact('result', 'direktur', 'tahun', 'logoLangsa'))->render();
+            // footer from view
+            $pdf->SetHTMLFooter(view('sk.footer-perjanjian-kerja-page-1', compact('result', 'direktur', 'tahun', 'logoLangsa'))->render());
 
-        $pdf->WriteHTML($html);
+            $pdf->WriteHTML($html);
 
-        // tambah halaman baru page-2
-        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+            // tambah halaman baru page-2
+            $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
 
-        $html = view('sk.perjanjian-kerja-page-2', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
-        $pdf->WriteHTML($html);
+            $html = view('sk.perjanjian-kerja-page-2', compact('result', 'direktur', 'tahun', 'logoLangsa'))->render();
 
-        // tambah halaman baru page-3
-        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+            $pdf->WriteHTML($html);
+
+            // tambah halaman baru page-3
+            $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+
+            $html = view('sk.perjanjian-kerja-page-3', compact('result', 'direktur', 'tahun', 'logoLangsa'))->render();
+
+            $pdf->WriteHTML($html);
+
+            // tambah halaman baru page-4
+            $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+
+            $html = view('sk.perjanjian-kerja-page-4', compact('result', 'direktur', 'tahun', 'logoLangsa'))->render();
+
+            $pdf->WriteHTML($html);
+
+            // $pdf->Output('Perjanjian-Kerja-' . $result->kd_karyawan . '-' . $result->tahun_sk . '.pdf', 'I');
+            // $pdf->Output('Perjanjian-Kerja Pegawai Kontrak.pdf', 'I');
+        }
+
+        $pdf->Output('Perjanjian-Kerja Pegawai Kontrak.pdf', 'I');
+
+        // $pdf->addPage('P', '', '', '', '', 15, 15, 5, 15, 5, 5);
+
+        // $html = view('sk.perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        // // footer from view
+        // $pdf->SetHTMLFooter(view('sk.footer-perjanjian-kerja-page-1', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render());
+
+        // $pdf->WriteHTML($html);
+
+        // // tambah halaman baru page-2
+        // $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+
+        // $html = view('sk.perjanjian-kerja-page-2', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        // $pdf->WriteHTML($html);
+
+        // // tambah halaman baru page-3
+        // $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
         
-        $html = view('sk.perjanjian-kerja-page-3', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
-        $pdf->WriteHTML($html);
+        // $html = view('sk.perjanjian-kerja-page-3', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        // $pdf->WriteHTML($html);
 
-        // tambah halaman baru page-4
-        $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
+        // // tambah halaman baru page-4
+        // $pdf->AddPage('P', '', '', '', '', 15, 15, 15, 15, 5, 5);
 
-        $html = view('sk.perjanjian-kerja-page-4', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
-        $pdf->WriteHTML($html);
+        // $html = view('sk.perjanjian-kerja-page-4', compact('results', 'direktur', 'tahun', 'logoLangsa'))->render();
+        // $pdf->WriteHTML($html);
 
-        $pdf->Output('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf', 'I');
+        // $pdf->Output('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf', 'I');
     }
 
     public function old_dompdf_printPerjanjianKerja($urut, $tahun)

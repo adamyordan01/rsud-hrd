@@ -1,6 +1,6 @@
 @php
     $gelar_depan = $getRincian->gelar_depan ? $getRincian->gelar_depan . '. ' : '';
-    $gelar_belakang = $getRincian->gelar_belakang ? ' ' . $getRincian->gelar_belakang : '';
+    $gelar_belakang = $getRincian->gelar_belakang ? $getRincian->gelar_belakang : '';
     $nama = $gelar_depan . $getRincian->nama . $gelar_belakang;
 @endphp
 
@@ -8,6 +8,7 @@
     @csrf
     <input type="hidden" name="kd_karyawan" id="kd_karyawan" value="{{ $getRincian->kd_karyawan }}">
     <input type="hidden" name="kd_mutasi" id="kd_mutasi" value="{{ $getRincian->kd_mutasi }}">
+    <input type="hidden" name="jenis_mutasi" id="jenis_mutasi" value="{{ $getRincian->kd_jenis_mutasi }}">
     <table class="table align-middle table-row-dashed table-striped fs-5 gy-5" id="kt_rincian_verif_1_table">
         <tr>
             <td>Kode Mutasi</td>

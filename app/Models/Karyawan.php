@@ -31,4 +31,22 @@ class Karyawan extends Model
     {
         return $this->hasOne(User::class, 'kd_karyawan', 'kd_karyawan');
     }
+
+    public function detailKaryawan()
+    {
+        return $this->belongsTo(ViewTampilKaryawan::class, 'kd_karyawan', 'kd_karyawan');
+    }
+
+    public function suratIzin()
+    {
+        return $this->hasMany(SuratIzin::class, 'kd_karyawan', 'kd_karyawan');
+    }
+
+    // Accessor untuk mendelegasikan ke detail karyawan
+    public function getNamaLengkapAttribute()
+    {
+        return $this->detailKaryawan ? 
+            $this->detailKaryawan->nama_lengkap :
+            null;
+    }
 }

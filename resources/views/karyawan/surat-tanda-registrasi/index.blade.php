@@ -428,11 +428,15 @@
                         $('#e_tgl_kadaluarsa').val(response.data.tgl_kadaluarsa);
                         $('#e_ket').val(response.data.ket);
 
-                        // Tampilkan nama file
+                        // Tampilkan nama file - menggunakan route download yang aman
                         if (response.data.sc_berkas) {
                             $('#existing_file').remove(); // Hapus info file lama jika ada
                             
-                            $('#e_sc_berkas').after('<div id="existing_file" class="mt-2">File saat ini: <a href="' + response.data.url_file + '" target="_blank">' + response.data.sc_berkas + '</a></div>');
+                            var downloadUrl = "{{ route('admin.karyawan.str.download', ['id' => ':id', 'urut' => ':urut']) }}";
+                            downloadUrl = downloadUrl.replace(':id', response.data.kd_karyawan);
+                            downloadUrl = downloadUrl.replace(':urut', response.data.urut_str);
+                            
+                            $('#e_sc_berkas').after('<div id="existing_file" class="mt-2">File saat ini: <a href="' + downloadUrl + '" target="_blank">' + response.data.sc_berkas + '</a></div>');
                         }
                         
                         // Atur checkbox berdasarkan tgl_kadaluarsa
@@ -506,6 +510,77 @@
                         $('.submit-btn').find('.spinner-border').addClass('d-none');
                         $(form).find('.btn-primary').attr('disabled', false);
                         $(form).find('.btn-primary .indicator-label').show();
+                    }
+                });
+            });
+
+            // Handle delete STR
+            $('#str-table').on('click', '.delete-str', function(e) {
+                e.preventDefault();
+                
+                var kd_karyawan = $(this).data('karyawan');
+                var urut = $(this).data('urut');
+                var noStr = $(this).data('no-str');
+                
+                // Konfirmasi dengan SweetAlert2
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: 'STR dengan nomor "' + noStr + '" akan dihapus permanen!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        var url = "{{ route('admin.karyawan.str.destroy', ['id' => ':kd_karyawan', 'urut' => ':urut']) }}";
+                        url = url.replace(':kd_karyawan', kd_karyawan);
+                        url = url.replace(':urut', urut);
+                        
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            data: {
+                                '_method': 'DELETE',
+                                '_token': $('meta[name="csrf-token"]').attr('content')
+                            },
+                            beforeSend: function() {
+                                Swal.fire({
+                                    title: 'Menghapus...',
+                                    text: 'Sedang menghapus STR',
+                                    allowOutsideClick: false,
+                                    didOpen: () => {
+                                        Swal.showLoading()
+                                    }
+                                });
+                            },
+                            success: function(response) {
+                                if (response.code === 200) {
+                                    Swal.fire({
+                                        title: 'Berhasil!',
+                                        text: response.message,
+                                        icon: 'success',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
+                                    table.ajax.reload(null, false);
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: response.message,
+                                        icon: 'error'
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: xhr.responseJSON?.message || 'Terjadi kesalahan saat menghapus STR.',
+                                    icon: 'error'
+                                });
+                            }
+                        });
                     }
                 });
             });

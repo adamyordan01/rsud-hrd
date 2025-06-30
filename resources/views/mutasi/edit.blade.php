@@ -118,12 +118,13 @@
                 novalidate="novalidate"
                 id="update-mutasi-nota"
                 method="POST"
-                action="{{ route('admin.mutasi.update-mutasi-nota-on-pending', ['id' => $mutasiOnPending->kd_mutasi]) }}"
+                action="{{ route('admin.mutasi.update-mutasi-nota-on-pending', ['id' => $mutasiOnPending->kd_mutasi, 'jenis_mutasi' => $mutasiOnPending->kd_jenis_mutasi]) }}"
             >
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="kd_mutasi_form" id="kd_mutasi_form" value="">
                 <input type="hidden" name="kd_karyawan_form" id="kd_karyawan_form" value="">
+                <input type="hidden" name="kd_jenis_mutasi" id="kd_jenis_mutasi" value="{{ $mutasiOnPending->kd_jenis_mutasi }}">
                 <div class="card mb-5">
                     <div class="card-body p-lg-12">
                         <div class="row g-5 mb-5">

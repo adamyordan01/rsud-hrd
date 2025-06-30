@@ -51,6 +51,7 @@
                             <thead>
                                 <tr>
                                     <th>Kode Mutasi</th>
+                                    <th>Jenis Mutasi</th>
                                     <th>ID Peg.</th>
                                     <th>Nama</th>
                                     <th>Jabatan</th>
@@ -62,7 +63,7 @@
                             <tbody>
                                 @forelse ($getMutasi as $item)
                                     <tr style="background: #1b84ff;">
-                                        <td style="vertical-align: middle" colspan="7">
+                                        <td style="vertical-align: middle" colspan="8">
                                             <b class="text-white">
                                                 Kode Mutasi - {{ $item->kd_mutasi }}
                                             </b>
@@ -75,7 +76,7 @@
                                             ->join('view_tampil_karyawan', 'hrd_r_mutasi.kd_karyawan', '=', 'view_tampil_karyawan.kd_karyawan')
                                             ->where('kd_mutasi', $item->kd_mutasi)
                                             ->where('kd_tahap_mutasi', 0)
-                                            ->where('kd_jenis_mutasi', 1)
+                                            ->whereIn('kd_jenis_mutasi', [1, 3])
                                             ->get();
                                     @endphp
 
@@ -87,6 +88,7 @@
                                         @endphp
                                         <tr>
                                             <td>{{ $data->kd_mutasi }}</td>
+                                            <td>{{ $data->kd_jenis_mutasi == 1 ? 'Mutasi (Nota)' : 'Tugas Tambahan' }}</td>
                                             <td>{{ $data->kd_karyawan }}</td>
                                             <td>{{ $nama }}</td>
                                             <td>{{ $data->jab_struk }}</td>
@@ -99,7 +101,7 @@
                                                         Route::patch('/mutasi/{id}/update', [MutasiController::class, 'update'])->name('update');
                                                     }); --}}
                                                 <a
-                                                    href="{{ route('admin.mutasi.edit-mutasi-nota-on-pending', $data->kd_mutasi) }}"
+                                                    href="{{ route('admin.mutasi.edit-mutasi-nota-on-pending', ['id' => $data->kd_mutasi, 'jenis_mutasi' => $data->kd_jenis_mutasi]) }}"
                                                     class="btn btn-light btn-sm btn-active-light-primary me-2 mb-2"
                                                 >
                                                     <i class="ki-duotone ki-arrow-left fs-2"><span class="path1"></span><span class="path2"></span></i>

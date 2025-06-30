@@ -1,3 +1,4 @@
+{{-- _actions.blade.php untuk SIP --}}
 <div class="d-block gap-2 flex-wrap justify-content-end">
     <button type="button" class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
         data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end"
@@ -35,15 +36,34 @@
                     href="javascript:void(0)"
                     id="approve"
                     data-karyawan="{{ $sip->kd_karyawan }}"
-                    data-urut="{{ $sip->urut }}"
+                    data-urut="{{ $sip->urut_sip }}"
                     class="menu-link px-3">
                     <i class="ki-duotone ki-check fs-3 me-2">
-                        <span class="path"></span>
-                        <span class="path"></span>
+                        <span class="path1"></span>
+                        <span class="path2"></span>
                     </i>
                     Setujui
                 </a>
             </div>
         @endif
+
+        <div class="menu-item px-3">
+            <a 
+                href="javascript:void(0)"
+                class="menu-link px-3 delete-sip"
+                data-karyawan="{{ $sip->kd_karyawan }}"
+                data-urut="{{ $sip->urut_sip }}"
+                data-no-sip="{{ $sip->no_sip }}"
+            >
+                <i class="ki-duotone ki-trash fs-3 me-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                    <span class="path4"></span>
+                    <span class="path5"></span>
+                </i>
+                Hapus
+            </a>
+        </div>
     </div>
 </div>

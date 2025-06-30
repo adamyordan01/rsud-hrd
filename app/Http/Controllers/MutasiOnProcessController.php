@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+// use Twilio\Rest\Client;
 use GuzzleHttp\Client;
 use Endroid\QrCode\QrCode;
 use Illuminate\Http\Request;
@@ -10,8 +11,10 @@ use Endroid\QrCode\Color\Color;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Support\Facades\Auth;
 use Endroid\QrCode\Encoding\Encoding;
 use Illuminate\Support\Facades\Storage;
+use Yajra\DataTables\Facades\DataTables;
 use Intervention\Image\ImageManagerStatic as Image;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
 
@@ -23,15 +26,17 @@ class MutasiOnProcessController extends Controller
         date_default_timezone_set('Asia/Jakarta');   
     }
 
-    public function index()
+    public function old_index()
     {
         // "select KD_MUTASI from HRD_R_MUTASI where KD_TAHAP_MUTASI = 1 group by KD_MUTASI";
         $getMutasi = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 1)
+            ->whereIn('kd_jenis_mutasi', [1, 3])
             ->orderBy('kd_mutasi', 'desc')
-            ->groupBy('kd_mutasi')
+            // ->groupBy('kd_mutasi')
             ->get();
+            // dd($getMutasi);
             // print_r($getMutasi);
             // die;
 
@@ -39,13 +44,15 @@ class MutasiOnProcessController extends Controller
         $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 1)
-            ->where('kd_jenis_mutasi', 1)
+            // ->where('kd_jenis_mutasi', 1)
+            ->whereIn('kd_jenis_mutasi', [1, 3])
             ->count();
 
         $totalMutasiPending = DB::table('hrd_r_mutasi')
             ->select('kd_mutasi')
             ->where('kd_tahap_mutasi', 0)
-            ->where('kd_jenis_mutasi', 1)
+            // ->where('kd_jenis_mutasi', 1)
+            ->whereIn('kd_jenis_mutasi', [1, 3])
             ->count();
 
         return view('mutasi.mutasi-on-process.index', [
@@ -55,10 +62,305 @@ class MutasiOnProcessController extends Controller
         ]);
     }
 
+    public function index()
+    {
+        // Hitung total mutasi untuk ditampilkan di halaman
+        $totalMutasiOnProcess = DB::table('hrd_r_mutasi')
+            ->where('kd_tahap_mutasi', 1)
+            ->whereIn('kd_jenis_mutasi', [1, 3])
+            ->count();
+
+        $totalMutasiPending = DB::table('hrd_r_mutasi')
+            ->where('kd_tahap_mutasi', 0)
+            ->whereIn('kd_jenis_mutasi', [1, 3])
+            ->count();
+
+        // Tampilkan view dengan data tambahan
+        return view('mutasi.mutasi-on-process.index', [
+            'totalMutasiOnProcess' => $totalMutasiOnProcess,
+            'totalMutasiPending' => $totalMutasiPending
+        ]);
+    }
+
+    public function datatable(Request $request)
+    {
+        // Ambil jabatan dan ruangan dari request
+        $jabatan = Auth::user()->karyawan->kd_jabatan_struktural;
+        $ruangan = Auth::user()->karyawan->kd_ruangan;
+        $searchValue = $request->search['value'];
+
+        // Query dasar
+        $query = DB::table('view_proses_mutasi')
+            ->where('kd_tahap_mutasi', 1)
+            ->whereIn('kd_jenis_mutasi', [1, 3]);
+
+        if (!empty($searchValue)) {
+            $query->where(function($q) use ($searchValue) {
+                $q->where('kd_mutasi', 'like', "%{$searchValue}%")
+                    ->orWhere('kd_karyawan', 'like', "%{$searchValue}%")
+                    ->orWhere('nama', 'like', "%{$searchValue}%")
+                    ->orWhere('jab_struk_lama', 'like', "%{$searchValue}%")
+                    ->orWhere('jab_struk_baru', 'like', "%{$searchValue}%")
+                    ->orWhere('ruangan_lama', 'like', "%{$searchValue}%")
+                    ->orWhere('ruangan_baru', 'like', "%{$searchValue}%")
+                    ->orWhere('tempat_lahir', 'like', "%{$searchValue}%");
+            });
+        }
+
+        // Gunakan Yajra DataTables untuk memproses query
+        return DataTables::of($query)
+            // Modifikasi data untuk setiap baris
+            ->editColumn('jenis_mutasi', function($item) {
+                // Format jenis mutasi
+                return match($item->kd_jenis_mutasi) {
+                    1 => 'Mutasi (Nota)',
+                    3 => 'Tugas Tambahan',
+                    default => 'Tidak Diketahui'
+                };
+            })
+            ->editColumn('nama', function($item) {
+                // Format nama dengan gelar
+                $gelar_depan = $item->gelar_depan ? $item->gelar_depan . ' ' : '';
+                $gelar_belakang = $item->gelar_belakang ? '' . $item->gelar_belakang : '';
+                $nama = $gelar_depan . $item->nama . $gelar_belakang;
+
+                // Tambahkan informasi tambahan
+                $asn = ($item->kd_status_kerja == 1 || $item->kd_status_kerja == 7) 
+                    ? "<br>" . $item->nip_baru . "<br>" . $item->no_karpeg 
+                    : "";
+
+                return $nama . '<br>' . 
+                    $item->tempat_lahir . ', ' . 
+                    date('d-m-Y', strtotime($item->tgl_lahir)) . 
+                    $asn;
+            })
+            ->editColumn('status', function($item) {
+                // Tentukan status verifikasi
+                if ($item->verif_1 == null) {
+                    return 'Menunggu verifikasi Kasubbag. Kepeg.';
+                } elseif ($item->verif_2 == null) {
+                    return 'Menunggu verifikasi Kabag. TU';
+                } elseif ($item->verif_3 == null) {
+                    return 'Menunggu verifikasi Wadir ADM dan Umum';
+                } elseif ($item->verif_4 == null) {
+                    return 'Menunggu verifikasi Direktur';
+                }
+                return 'Selesai';
+            })
+            ->addColumn('jabatan_lama', function($item) {
+                return $item->jab_struk_lama . '<br>' . 
+                    $item->sub_detail_lama . '<br>' . 
+                    $item->ruangan_lama;
+            })
+            ->addColumn('jabatan_baru', function($item) {
+                return $item->jab_struk_baru . '<br>' . 
+                    $item->sub_detail_baru . '<br>' . 
+                    $item->ruangan_baru;
+            })
+            ->addColumn('aksi', function($item) use ($jabatan, $ruangan) {
+                $aksi = '';
+    
+                // Logika tombol verifikasi sesuai dengan kondisi jabatan dan ruangan
+                if ($item->verif_1 == null) {
+                    if ($jabatan == 19 || $ruangan == 57) {
+                        $aksi .= '<a href="javascript:void(0)"
+                            class="btn btn-info btn-sm d-block mb-2"
+                            title="Verifikasi Ka.Sub.Bag. Kepeg."
+                            data-id="' . $item->kd_mutasi . '"
+                            data-karyawan="' . $item->kd_karyawan . '"
+                            data-jenis-mutasi="' . $item->kd_jenis_mutasi . '"
+                            data-url="' . route('admin.mutasi-on-process.first-verification') . '"
+                            data-bs-toggle="modal"
+                            data-bs-target="#kt_modal_verif"
+                            id="verif1">
+                            <i class="ki-duotone ki-double-check fs-2"><span class="path1"></span><span class="path2"></span></i> 
+                            Verifikasi Ka.Sub.Bag. Kepeg.
+                        </a>';
+                    }
+                } elseif ($item->verif_2 == null) {
+                    if ($jabatan == 7 || $ruangan == 57) {
+                        $aksi .= '<a href="javascript:void(0)"
+                            class="btn btn-primary btn-sm d-block mb-2"
+                            title="Verifikasi Kabag. TU"
+                            data-id="' . $item->kd_mutasi . '"
+                            data-karyawan="' . $item->kd_karyawan . '"
+                            data-jenis-mutasi="' . $item->kd_jenis_mutasi . '"
+                            data-url="' . route('admin.mutasi-on-process.second-verification') . '"
+                            data-bs-toggle="modal"
+                            data-bs-target="#kt_modal_verif"
+                            id="verif2">
+                            <i class="ki-duotone ki-double-check fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            Verifikasi Kabag. TU
+                        </a>';
+                    }
+                } elseif ($item->verif_3 == null) {
+                    if ($jabatan == 3 || $jabatan == 6 || $ruangan == 57) {
+                        $aksi .= '<a href="javascript:void(0)"
+                            class="btn btn-warning btn-sm d-block mb-2"
+                            title="Menunggu verifikasi Wadir ADM dan Umum"
+                            data-id="' . $item->kd_mutasi . '"
+                            data-karyawan="' . $item->kd_karyawan . '"
+                            data-jenis-mutasi="' . $item->kd_jenis_mutasi . '"
+                            data-url="' . route('admin.mutasi-on-process.third-verification') . '"
+                            data-bs-toggle="modal"
+                            data-bs-target="#kt_modal_verif"
+                            id="verif3">
+                            <i class="ki-duotone ki-double-check fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            Menunggu verifikasi Wadir ADM dan Umum
+                        </a>';
+                    }
+                    if ($jabatan == 1 || $ruangan == 57) {
+                        $aksi .= '<a href="javascript:void(0)"
+                            class="btn btn-success btn-sm d-block mb-2"
+                            title="Menunggu verifikasi Direktur"
+                            data-id="' . $item->kd_mutasi . '"
+                            data-karyawan="' . $item->kd_karyawan . '"
+                            data-jenis-mutasi="' . $item->kd_jenis_mutasi . '"
+                            data-url="' . route('admin.mutasi-on-process.fourth-verification') . '"
+                            id="verif4">
+                            <i class="ki-duotone ki-double-check fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            Menunggu verifikasi Direktur
+                        </a>';
+                    }
+                } elseif ($item->verif_4 == null) {
+                    if ($jabatan == 1 || $ruangan == 57) {
+                        $aksi .= '<a href="javascript:void(0)"
+                            class="btn btn-success btn-sm d-block mb-2"
+                            title="Menunggu verifikasi Direktur"
+                            data-id="' . $item->kd_mutasi . '"
+                            data-karyawan="' . $item->kd_karyawan . '"
+                            data-jenis-mutasi="' . $item->kd_jenis_mutasi . '"
+                            data-url="' . route('admin.mutasi-on-process.fourth-verification') . '"
+                            id="verif4">
+                            <i class="ki-duotone ki-double-check fs-2"><span class="path1"></span><span class="path2"></span></i>
+                            Menunggu verifikasi Direktur
+                        </a>';
+                    }
+                }
+    
+                // Tambahan tombol edit mutasi nota
+                if (($ruangan == 91 || $ruangan == 57) && $item->kd_tahap_mutasi == 1) {
+                    $aksi .= '<a href="' . route('admin.mutasi.edit-mutasi-nota-on-process', [
+                        'id' => $item->kd_mutasi, 
+                        'jenis_mutasi' => $item->kd_jenis_mutasi
+                    ]) . '" class="btn btn-light-dark btn-sm d-block mb-2">
+                        <i class="ki-duotone ki-notepad-edit fs-2"><span class="path1"></span><span class="path2"></span></i>
+                        Edit Mutasi Nota
+                    </a>';
+                }
+    
+                // Tombol cetak draft nota dan log
+                $aksi .= '<a href="' . route('admin.mutasi-on-process.print-draft-sk', [
+                    $item->kd_karyawan, 
+                    $item->kd_mutasi, 
+                    $item->kd_jenis_mutasi
+                ]) . '" target="_blank" class="btn btn-primary btn-sm d-block mb-2">
+                    <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
+                    Cetak Draft Nota
+                </a>
+                <a href="javascript:void(0)" 
+                    class="btn btn-secondary btn-sm d-block mb-2" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#kt_modal_log" 
+                    data-id="' . $item->kd_mutasi . '" 
+                    data-karyawan="' . $item->kd_karyawan . '" 
+                    id="log">
+                    <i class="ki-duotone ki-timer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                    Lihat Log
+                </a>';
+    
+                return $aksi;
+            })
+            ->rawColumns(['nama', 'status', 'jabatan_lama', 'jabatan_baru', 'aksi'])
+            ->make(true);
+    }
+
+    // Metode bantuan untuk memformat ASN
+    private function formatASN($item)
+    {
+        return ($item->kd_status_kerja == 1 || $item->kd_status_kerja == 7) 
+            ? "<br>" . $item->nip_baru . "<br>" . $item->no_karpeg 
+            : "";
+    }
+
+    // Metode bantuan untuk menentukan status verifikasi
+    private function determineVerificationStatus($item)
+    {
+        if ($item->verif_1 == null) {
+            return 'Menunggu verifikasi Kasubbag. Kepeg.';
+        } elseif ($item->verif_2 == null) {
+            return 'Menunggu verifikasi Kabag. TU';
+        } elseif ($item->verif_3 == null) {
+            return 'Menunggu verifikasi Wadir ADM dan Umum';
+        } elseif ($item->verif_4 == null) {
+            return 'Menunggu verifikasi Direktur';
+        }
+        return 'Selesai';
+    }
+
+    // Metode bantuan untuk generate tombol aksi
+    private function generateActionButtons($item)
+    {
+        $buttons = '';
+
+        // Tambahkan logika untuk tombol aksi sesuai kebutuhan
+        $buttons .= '<a href="' . route('admin.mutasi-on-process.print-draft-sk', [
+            $item->kd_karyawan, 
+            $item->kd_mutasi, 
+            $item->kd_jenis_mutasi
+        ]) . '" target="_blank" class="btn btn-primary btn-sm d-block mb-2">Cetak Draft Nota</a>';
+
+        $buttons .= '<a href="javascript:void(0)" 
+            class="btn btn-secondary btn-sm d-block mb-2" 
+            data-bs-toggle="modal" 
+            data-bs-target="#kt_modal_log" 
+            data-id="' . $item->kd_mutasi . '" 
+            data-karyawan="' . $item->kd_karyawan . '" 
+            id="log">Lihat Log</a>';
+
+        return $buttons;
+    }
+
     public function firstVerification(Request $request)
     {
         $kd_karyawan = $request->kd_karyawan;
         $kd_mutasi = $request->kd_mutasi;
+
+        // $getNoHp = DB::table('hrd_karyawan')
+        //     ->select('no_hp')
+        //     ->where('kd_jabatan_struktural', 19)
+        //     ->first();
+
+        // $getNoHp = DB::table('hrd_karyawan')
+        //     ->select('no_hp')
+        //     ->where('kd_karyawan', '001635')
+        //     ->first();
+
+        // 0822 6791 3292 _  ubah ke +6282267913292
+        // $no_hp = $this->formatPhoneNumber($getNoHp->no_hp);
+
+        $getDataKaryawan = DB::table('hrd_karyawan')
+            ->select('gelar_depan', 'nama', 'gelar_belakang')
+            ->where('kd_karyawan', $kd_karyawan)
+            ->first();
+
+        $gelar_depan = $getDataKaryawan->gelar_depan ? $getDataKaryawan->gelar_depan . ' ' : '';
+        $gelar_belakang = $getDataKaryawan->gelar_belakang ? '' . $getDataKaryawan->gelar_belakang : '';
+        $nama_karyawan = $gelar_depan . $getDataKaryawan->nama . $gelar_belakang;
+
+            // $message = "Ada Mutasi Baru dengan Kode Mutasi: {$kd_mutasi} dan Kode Karyawan: {$kd_karyawan} \n Silahkan cek aplikasi pada aplikasi HRD untuk melakukan verifikasi atau dengan klik link berikut:\n https://e-rsud.langsakota.go.id/rsud_hrd/admin/mutasi-on-process";
+
+            // buat pesannya menjadi seperti berikut ini
+            // Ada Mutasi Nota Tugas Baru dengan rincian sebagai berikut:
+            // Kode Mutasi: {kd_mutasi}
+            // Kode Karyawan: {kd_karyawan}
+            // Nama Karyawan: {nama_karyawan}
+            // Silahkan cek aplikasi pada aplikasi HRD untuk melakukan verifikasi atau dengan klik link berikut:
+            // https://e-rsud.langsakota.go.id/rsud_hrd/admin/mutasi-on-process
+
+            // $message = "Ada Mutasi Nota Tugas Baru dengan rincian sebagai berikut:\nKode Mutasi: {$kd_mutasi}\nKode Karyawan: {$kd_karyawan}\nNama Karyawan: {$nama_karyawan}\nSilahkan cek aplikasi pada aplikasi HRD untuk melakukan verifikasi atau dengan klik link berikut:\nhttps://e-rsud.langsakota.go.id/rsud_hrd/admin/mutasi-on-process";
+
+            // dd($no_hp, $message);
 
         $update = DB::table('hrd_r_mutasi')
             ->where('kd_karyawan', $kd_karyawan)
@@ -71,6 +373,10 @@ class MutasiOnProcessController extends Controller
 
         if ($update) {
             $this->logSuccess($kd_mutasi, 'Verifikasi 1', 'Nota Mutasi berhasil diverifikasi oleh Kasubbag. Kepegawaian');
+
+            
+
+            // $this->whatsappNotification($no_hp, $message);
 
             return response()->json([
                 'code' => 200,
@@ -195,6 +501,7 @@ class MutasiOnProcessController extends Controller
 
     public function finalisasi(Request $request)
     {
+        $jenisMutasi = $request->jenis_mutasi;
         $kd_mutasi = $request->kd_mutasi;
         $kd_karyawan = $request->kd_karyawan;
         $passphrase = $request->passphrase;
@@ -217,15 +524,18 @@ class MutasiOnProcessController extends Controller
                     'no_nota' => $no_nota
                 ]);
 
+            
             $getEmail = DB::table('hrd_karyawan as hk')
                 ->leftJoin('hrd_tempat_kerja as htk', 'hk.kd_karyawan', '=', 'htk.kd_karyawan')
                 ->select('hk.email', DB::raw('Max(htk.no_urut) as urut_max'))
                 ->where('hk.kd_karyawan', $kd_karyawan)
+                ->where('htk.kd_jenis_mutasi', $jenisMutasi)
                 ->groupBy('hk.email')
                 ->first();
+                // dd($getEmail);
 
             // get urut max and plus 1
-            $urutMax = $getEmail->urut_max + 1;
+            $urutMax = $getEmail ? $getEmail->urut_max + 1 : 1;
 
             // $getMutasi = sqlsrv_query($konek, "select * from HRD_R_MUTASI where KD_MUTASI = '$kdmutasi'");
             $getMutasi = DB::table('hrd_r_mutasi')
@@ -242,33 +552,44 @@ class MutasiOnProcessController extends Controller
                     'kd_ruangan' => $getMutasi->kd_ruangan,
                     'tgl_masuk' => $getMutasi->tmt_jabatan,
                     'kd_mutasi' => $getMutasi->kd_mutasi,
-                    'no_urut' => $urutMax
+                    'no_urut' => $urutMax,
+                    'kd_jenis_mutasi' => $jenisMutasi
                 ]);
 
             // $query = sqlsrv_query($konek, "update HRD_KARYAWAN set KD_JABATAN_STRUKTURAL = '".$getAllMutasi['KD_JAB_STRUK']."', TMT_JABATAN_STRUKTURAL = '".date_format($getAllMutasi['TMT_JABATAN'], 'Y-m-d')."', KD_JENIS_TENAGA = '".$getAllMutasi['KD_JENIS_TENAGA']."', KD_DETAIL_JENIS_TENAGA = '".$getAllMutasi['KD_DETAIL']."', KD_SUB_DETAIL_JENIS_TENAGA = '".$getAllMutasi['KD_SUB_DETAIL']."', KD_DIVISI = '".$getAllMutasi['KD_DIVISI']."', KD_UNIT_KERJA = '".$getAllMutasi['KD_UNIT_KERJA']."', KD_SUB_UNIT_KERJA = '".$getAllMutasi['KD_SUB_UNIT_KERJA']."', KD_RUANGAN = '".$getAllMutasi['KD_RUANGAN']."' where KD_KARYAWAN = '$kdkar'");
-            DB::table('hrd_karyawan')
-                ->where('kd_karyawan', $kd_karyawan)
-                ->update([
-                    'kd_jabatan_struktural' => $getMutasi->kd_jab_struk,
-                    'tmt_jabatan_struktural' => $getMutasi->tmt_jabatan,
-                    'kd_jenis_tenaga' => $getMutasi->kd_jenis_tenaga,
-                    'kd_detail_jenis_tenaga' => $getMutasi->kd_detail,
-                    'kd_sub_detail_jenis_tenaga' => $getMutasi->kd_sub_detail,
-                    'kd_divisi' => $getMutasi->kd_divisi,
-                    'kd_unit_kerja' => $getMutasi->kd_unit_kerja,
-                    'kd_sub_unit_kerja' => $getMutasi->kd_sub_unit_kerja,
-                    'kd_ruangan' => $getMutasi->kd_ruangan
-                ]);
+            // update data karyawan jika kd_jenis_mutasi = 1
+            if ($jenisMutasi == 1) {
+                $updateKaryawan = DB::table('hrd_karyawan')
+                    ->where('kd_karyawan', $kd_karyawan)
+                    ->update([
+                        'kd_jabatan_struktural' => $getMutasi->kd_jab_struk,
+                        'tmt_jabatan_struktural' => $getMutasi->tmt_jabatan,
+                        'kd_jenis_tenaga' => $getMutasi->kd_jenis_tenaga,
+                        'kd_detail_jenis_tenaga' => $getMutasi->kd_detail,
+                        'kd_sub_detail_jenis_tenaga' => $getMutasi->kd_sub_detail,
+                        'kd_divisi' => $getMutasi->kd_divisi,
+                        'kd_unit_kerja' => $getMutasi->kd_unit_kerja,
+                        'kd_sub_unit_kerja' => $getMutasi->kd_sub_unit_kerja,
+                        'kd_ruangan' => $getMutasi->kd_ruangan
+                    ]);
 
-            // $query = sqlsrv_query($konek, "update HRD_TEMPAT_KERJA set TGL_KELUAR = (select TMT_JABATAN from HRD_R_MUTASI where KD_KARYAWAN = '$kdkar' and KD_MUTASI = '$kdmutasi') WHERE KD_KARYAWAN = '$kdkar' and NO_URUT = (select MAX(NO_URUT - 1) from HRD_TEMPAT_KERJA where KD_KARYAWAN = '$kdkar')");
-            DB::table('hrd_tempat_kerja')
-                ->where('kd_karyawan', $kd_karyawan)
-                ->where('no_urut', $urutMax - 1)
-                ->update([
-                    'tgl_keluar' => $getMutasi->tmt_jabatan
-                ]);
+                DB::table('hrd_tempat_kerja')
+                    ->where('kd_karyawan', $kd_karyawan)
+                    ->where('no_urut', $urutMax - 1)
+                    ->update([
+                        'tgl_keluar' => $getMutasi->tmt_jabatan
+                    ]);
+            } else if ($jenisMutasi == 3) {
+                // update hrd_tempat_kerja saja
+                DB::table('hrd_tempat_kerja')
+                    ->where('kd_karyawan', $kd_karyawan)
+                    ->where('no_urut', $urutMax - 1)
+                    ->update([
+                        'tgl_keluar' => $getMutasi->tmt_jabatan
+                    ]);
+            }
 
-            $printSkResponse = $this->printSk($kd_karyawan, $kd_mutasi, $passphrase);
+            $printSkResponse = $this->printSk($kd_karyawan, $kd_mutasi, $passphrase, $jenisMutasi);
             $printSkData = json_decode($printSkResponse->getContent(), true);
 
             if ($printSkData['original']['code'] == 200) {
@@ -284,15 +605,16 @@ class MutasiOnProcessController extends Controller
             } else {
                 $message = $printSkData['original']['message'] ?? 'Gagal menandatangani nota mutasi secara digital.';
                 // $this->logFailed($kd_mutasi, 'Finalisasi', $message);
-                DB::table('hrd_log_mutasi')
-                    ->insert([
-                        'kd_mutasi' => $kd_mutasi,
-                        'kd_karyawan' => $kd_karyawan,
-                        'tahap' => 'Finalisasi',
-                        'keterangan' => $message,
-                        'user' => auth()->user()->kd_karyawan,
-                        'waktu' => Carbon::now()
-                    ]);
+                $this->logFailed($kd_mutasi, 'Finalisasi', 'Nota Mutasi gagal ditanda tangani secara digital.' . $message);
+                // DB::table('hrd_log_mutasi')
+                //     ->insert([
+                //         'kd_mutasi' => $kd_mutasi,
+                //         'kd_karyawan' => $kd_karyawan,
+                //         'tahap' => 'Finalisasi',
+                //         'keterangan' => $message,
+                //         'user' => auth()->user()->kd_karyawan,
+                //         'waktu' => Carbon::now()
+                //     ]);
                 
                 DB::rollBack();
 
@@ -307,15 +629,16 @@ class MutasiOnProcessController extends Controller
             // $this->logFailed($kd_mutasi, 'Finalisasi', 'Nota Mutasi gagal ditanda tangani secara digital.' . $e->getMessage());
             $message = $e->getMessage() ?? 'Gagal menandatangani nota mutasi secara digital.';
             // $this->logFailed($kd_mutasi, 'Finalisasi', $message);
-            DB::table('hrd_log_mutasi')
-                ->insert([
-                    'kd_mutasi' => $kd_mutasi,
-                    'kd_karyawan' => $kd_karyawan,
-                    'tahap' => 'Finalisasi',
-                    'keterangan' => $message,
-                    'user' => auth()->user()->kd_karyawan,
-                    'waktu' => Carbon::now()
-                ]);
+            $this->logFailed($kd_mutasi, 'Finalisasi', 'Nota Mutasi gagal ditanda tangani secara digital.' . $e->getMessage());
+            // DB::table('hrd_log_mutasi')
+            //     ->insert([
+            //         'kd_mutasi' => $kd_mutasi,
+            //         'kd_karyawan' => $kd_karyawan,
+            //         'tahap' => 'Finalisasi',
+            //         'keterangan' => $message,
+            //         'user' => auth()->user()->kd_karyawan,
+            //         'waktu' => Carbon::now()
+            //     ]);
             
             DB::rollBack();
 
@@ -330,24 +653,35 @@ class MutasiOnProcessController extends Controller
 
     public function rincian(Request $request)
     {
+        $kdMutasi = $request->kd_mutasi;
         $kdKaryawan = $request->kd_karyawan;
+        $jenisMutasi = $request->jenis_mutasi;
 
-        $getRincian = DB::table('view_proses_mutasi as vpm')
-        ->join('view_max_mutasi as vmm', function ($join) use ($kdKaryawan) {
-            $join->on('vpm.kd_mutasi', '=', 'vmm.kd_mutasi_max')
-                 ->where('vmm.kd_karyawan', '=', $kdKaryawan);
-        })
-        ->where('vpm.kd_karyawan', $kdKaryawan)
-        ->select('vpm.*')
-        ->first();
-        // dd($getRincian);
+        // jika kd_jenis_mutasi = 1 maka tampilkan rincian mutasi pegawai
+        if ($jenisMutasi == 1) {
+            $getRincian = DB::table('view_proses_mutasi as vpm')
+            ->join('view_max_mutasi as vmm', function ($join) use ($kdKaryawan) {
+                $join->on('vpm.kd_mutasi', '=', 'vmm.kd_mutasi_max')
+                     ->where('vmm.kd_karyawan', '=', $kdKaryawan);
+            })
+            ->where('vpm.kd_karyawan', $kdKaryawan)
+            ->select('vpm.*')
+            ->first();
+        } else if ($jenisMutasi == 3) {
+            // kalau jenis mutasi = 3 maka tampilkan rincian mutasi pegawai dengan mengambil data dari view_proses_mutasi berdasarkan kdMutasi
+            $getRincian = DB::table('view_proses_mutasi as vpm')
+                ->where('vpm.kd_mutasi', $kdMutasi)
+                ->where('vpm.kd_karyawan', $kdKaryawan)
+                ->select('vpm.*')
+                ->first();
+        }
 
         return view('mutasi.mutasi-on-process.rincian', [
             'getRincian' => $getRincian
         ]);
     }
 
-    private function printSk($kd_karyawan, $kd_mutasi, $passphrase)
+    private function printSk($kd_karyawan, $kd_mutasi, $passphrase, $kd_jenis_mutasi)
     {
         $logo = public_path('assets/media/rsud-langsa/logo-putih.png');
         $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
@@ -360,6 +694,7 @@ class MutasiOnProcessController extends Controller
             ->where('vv.kd_mutasi', $kd_mutasi)
             ->select('vv.*', 'vtk.pangkat', 'hg.alias_gol as alias_gol_sekarang')
             ->first();
+            // dd($getVerifikasi);
             
         $getDataLama = DB::table('HRD_TEMPAT_KERJA as t')
             ->join('HRD_R_MUTASI as m', function ($join) {
@@ -385,6 +720,9 @@ class MutasiOnProcessController extends Controller
             ->where('vtk.status_peg', 1)
             ->select('vtk.*', 'hg.alias_gol as alias_gol_sekarang')
             ->first();
+            // print_r($getDirektur);
+            // die;
+            // dd($getVerifikasi);
 
         $year = date('Y');
         // $pdfFilePath = $totalRow > 1
@@ -415,17 +753,18 @@ class MutasiOnProcessController extends Controller
             'getDirektur' => $getDirektur,
             'logo' => $logo,
             'logoLangsa' => $logoLangsa,
-            'logoEsign' => $logoEsign
+            'logoEsign' => $logoEsign,
+            'kd_jenis_mutasi' => $kd_jenis_mutasi
         ];
 
         $pdf = \PDF::loadView('mutasi.mutasi-on-process.nota-tugas-final', $data, [], [
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
-            'margin_top' => 5,
+            'margin_top' => 10,
             'margin_right' => 15,
             'margin_bottom' => 15,
             'margin_left' => 15,
-            'margin_header' => 5,
+            'margin_header' => 25,
             'margin_footer' => 5,
             // font size 11pt
             'default_font_size' => 11,
@@ -457,7 +796,7 @@ class MutasiOnProcessController extends Controller
     }
 
     // buat fungsi printDraftSk untuk menampilkan preview nota tugas mutasi tidak perlu tanda tangan elektronik dan langsung download jangan simpan di storage
-    public function printDraftSk($kd_karyawan, $kd_mutasi)
+    public function printDraftSk($kd_karyawan, $kd_mutasi, $kd_jenis_mutasi)
     {
         $logo = public_path('assets/media/rsud-langsa/logo-putih.png');
         $logoLangsa = public_path('assets/media/rsud-langsa/Langsa.png');
@@ -470,6 +809,7 @@ class MutasiOnProcessController extends Controller
             ->where('vv.kd_mutasi', $kd_mutasi)
             ->select('vv.*', 'vtk.pangkat', 'hg.alias_gol as alias_gol_sekarang')
             ->first();
+            // dd($getVerifikasi);
 
             // dd($getVerifikasi);
         // $getDataLama = sqlsrv_query($konek, "select m.KD_JENIS_TENAGA, m.KD_DETAIL, m.KD_SUB_DETAIL, j.SUB_DETAIL as JENIS_TENAGA, t.KD_RUANGAN, r.ruangan as RUANGAN from HRD_TEMPAT_KERJA t inner join HRD_R_MUTASI m on m.KD_KARYAWAN = t.KD_KARYAWAN and m.KD_MUTASI = t.KD_MUTASI inner join HRD_JENIS_TENAGA_SUB_DETAIL j on m.KD_JENIS_TENAGA = j.KD_JENIS_TENAGA and m.KD_DETAIL = j.KD_DETAIL and m.KD_SUB_DETAIL = j.KD_SUB_DETAIL inner join HRD_RUANGAN r on t.KD_RUANGAN = r.kd_ruangan where t.KD_KARYAWAN = '$kdkar' and t.NO_URUT = (select max(NO_URUT) from HRD_TEMPAT_KERJA where KD_KARYAWAN = '$kdkar')");
@@ -520,11 +860,12 @@ class MutasiOnProcessController extends Controller
             'getDirektur' => $getDirektur,
             'logo' => $logo,
             'logoLangsa' => $logoLangsa,
-            'logoEsign' => $logoEsign
+            'logoEsign' => $logoEsign,
+            'kd_jenis_mutasi' => $kd_jenis_mutasi
         ], [], [
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
-            'margin_top' => 5,
+            'margin_top' => 10,
             'margin_right' => 15,
             'margin_bottom' => 15,
             'margin_left' => 15,
@@ -554,6 +895,65 @@ class MutasiOnProcessController extends Controller
     }
 
     private function getNotaNumber($kd_karyawan)
+    {
+        // Mengambil jenis mutasi untuk karyawan tertentu
+        $jenisMutasi = DB::table('hrd_r_mutasi')
+            ->select('kd_jenis_mutasi')
+            ->where('kd_karyawan', $kd_karyawan)
+            ->where('kd_tahap_mutasi', 1)
+            ->first();
+
+        // Cek apakah data jenis mutasi ada
+        if (!$jenisMutasi) {
+            Log::info("No mutasi type found for kd_karyawan: {$kd_karyawan}");
+            return null;
+        }
+
+        // Menentukan prefix berdasarkan kd_jenis_mutasi
+        $prefix = '';
+        if ($jenisMutasi->kd_jenis_mutasi == 1) {
+            $prefix = 'NT';
+        } elseif ($jenisMutasi->kd_jenis_mutasi == 3) {
+            $prefix = 'NTT';
+        } else {
+            Log::info("Invalid kd_jenis_mutasi: {$jenisMutasi->kd_jenis_mutasi}");
+            return null;
+        }
+
+        // Mengambil nomor nota yang sudah ada untuk tahun ini
+        $year = date('Y');
+        $fetchNotaNumber = DB::table('hrd_r_mutasi')
+            ->select(DB::raw('SUBSTRING(no_nota, 7, 3) as nomor'))
+            ->where('kd_jenis_mutasi', $jenisMutasi->kd_jenis_mutasi)
+            ->whereRaw('RIGHT(no_nota, 4) = ?', [$year])
+            ->orderBy(DB::raw('SUBSTRING(no_nota, 7, 3)'), 'desc')
+            ->first();
+
+        // Jika nomor nota kosong
+        $currentNumber = $fetchNotaNumber ? (int)$fetchNotaNumber->nomor + 1 : 1;
+
+        // Jika prefix adalah NTT dan belum ada nomor, mulai dari 1
+        if ($prefix === 'NTT' && !$fetchNotaNumber) {
+            $currentNumber = 1;
+        }
+
+        $notaNumber = sprintf('%03s', $currentNumber);
+        // $no_nota = "875.{$jenisMutasi->kd_jenis_mutasi}/{$notaNumber}/{$prefix}/{$year}";
+        $no_nota = "875.1/{$notaNumber}/{$prefix}/{$year}";
+
+        // Update nomor nota ke tabel mutasi
+        DB::table('hrd_r_mutasi')
+            ->where('kd_karyawan', $kd_karyawan)
+            ->where('kd_tahap_mutasi', 1)
+            ->update([
+                'no_nota' => $no_nota
+            ]);
+
+        return $no_nota;
+    }
+
+
+    private function old_getNotaNumber($kd_karyawan)
     {
         $data = DB::table('hrd_r_mutasi')
             ->select('no_nota')
@@ -836,5 +1236,48 @@ class MutasiOnProcessController extends Controller
         // }
 
         // return response()->json($log);
+    }
+
+    private function formatPhoneNumber($phoneNumber) 
+    {
+        // Hapus semua spasi dan karakter _
+        $phoneNumber = str_replace([' ', '_'], '', $phoneNumber);
+    
+        // Ganti awalan 08 dengan +628
+        if (substr($phoneNumber, 0, 2) === '08') {
+            $phoneNumber = substr_replace($phoneNumber, '+628', 0, 2);
+        }
+    
+        return $phoneNumber;
+    }
+
+    // private function whatsappNotification($recepient, $message)
+    // {
+    //     $sid = getenv("TWILIO_AUTH_SID");
+    //     $token = getenv("TWILIO_AUTH_TOKEN");
+    //     $wa_from = getenv("TWILIO_WHATSAPP_FROM");
+
+    //     $twilio = new Client($sid, $token);
+
+    //     return $twilio->messages->create("whatsapp:$recepient", [
+    //         "from" => "whatsapp:$wa_from",
+    //         "body" => $message
+    //     ]);
+    // }
+
+    public function array()
+    {
+        $array = ['Banana', 'banana', 'Apple', 'apple', 'zalaca'];
+
+        // jadikan lower agar tidak case sensitive
+        $array = array_map('strtolower', $array);
+
+        // hapus duplikat
+        $unique = array_unique($array);
+
+        // urutkan
+        sort($unique);
+
+        print_r($unique);
     }
 }

@@ -13,6 +13,9 @@
     <meta property="og:title" content="Aplikasi HRD - RSUD Langsa" />
     <meta property="og:url" content="https://e-rsud.langsakota.go.id/rsud_hrd/" />
     <meta property="og:site_name" content="RSUD LANGSA" />
+
+    @stack('meta')
+
     <link rel="canonical" href="https://e-rsud.langsakota.go.id/rsud_hrd/login" />
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
 
@@ -144,70 +147,78 @@
         <!--end::Page-->
     </div>
     <!--end::App-->
+    
+    <!-- modal ketika ubah password -->
+    <div class="modal fade" id="editPasswordModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog mw-550px">
+            <div class="modal-content">
+                <div class="modal-header" id="kt_modal_add_agenda_header">
+                    <h2 class="fw-bold modal-title title-edit-rule">Edit Password</h2>
+
+                    <div class="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
+                    </div>
+                </div>
+                <form
+                    action="{{ route('change-password') }}"
+                    method="POST"
+                    class="form"
+                    id="editPasswordForm"
+                >
+                    @csrf
+                    <input type="hidden" name="user_id" id="user_id" />
+                    <div class="modal-body">
+                        <!-- password saat ini -->
+                        <div class="d-flex flex-column mb-3">
+                            <label
+                                class="fw-semibold fs-6 mb-2 d-flex align-items-center"
+                            >
+                                Password Saat Ini
+                            </label>
+                            <input type="password" class="form-control form-control-solid" name="current_password" id="current_password" autofocus placeholder="Password Saat Ini" />
+                            <div class="fv-plugins-message-container invalid-feedback error-text current_password_error"></div>
+                        </div>
+
+                        <!-- password baru -->
+                        <div class="d-flex flex-column mb-3">
+                            <label
+                                class="fw-semibold fs-6 mb-2 d-flex align-items-center"
+                            >
+                                Password Baru
+                            </label>
+                            <input type="password" class="form-control form-control-solid" name="new_password" id="new_password" autofocus placeholder="Password Baru" />
+                            <div class="fv-plugins-message-container invalid-feedback error-text new_password_error"></div>
+                        </div>
+
+                        <!-- konfirmasi password baru -->
+                        <div class="d-flex flex-column mb-3">
+                            <label
+                                class="fw-semibold fs-6 mb-2 d-flex align-items-center"
+                            >
+                                Konfirmasi Password Baru
+                            </label>
+                            <input type="password" class="form-control form-control-solid" name="new_password_confirmation" id="new_password_confirmation" autofocus placeholder="Konfirmasi Password Baru" />
+                            <div class="fv-plugins-message-container invalid-feedback error-text new_password_confirmation_error"></div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary submit-btn" id="submit" data-kt-menu-modal-action="submit">
+                            <span class="indicator-label">
+                                Save Changes
+                            </span>
+                            <span class="indicator-progress">
+                                Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
 
-    <!--begin::App layout builder-->
-    
-    <!--end::App layout builder-->
-
-    <!--begin::App settings toggle-->
-    
-    <!--end::App settings toggle-->
-    <!--begin::Drawers-->
-    <!--begin::Activities drawer-->
-    
-    <!--end::Activities drawer-->
-
-    <!--begin::Chat drawer-->
-    
-    <!--end::Chat drawer-->
-
-    <!--begin::Chat drawer-->
-    
-    <!--end::Chat drawer-->
-    <!--end::Drawers-->
-    <!--begin::Engage-->
-    
-    <!--end::Engage-->
-
-    <!--begin::Engage modals-->
-    <!--begin::Modal - Sitemap-->
-    
-    <!--end::Modal - Sitemap-->
-    <!--end::Engage modals-->
-    <!--begin::Scrolltop-->
-    
-    <!--end::Scrolltop-->
-
-    <!--begin::Modals-->
-
-    <!--begin::Modal - Upgrade plan-->
-    
-    <!--end::Modal - Upgrade plan-->
-    <!--begin::Modal - View Users-->
-    
-    <!--end::Modal - View Users-->
-    <!--begin::Modal - Create Campaign-->
-    
-    <!--end::Modal - Create Campaign-->
-    <!--begin::Modal - Create Project-->
-    
-    <!--end::Modal - Create Project-->
-    <!--begin::Modal - Create App-->
-    
-    <!--end::Modal - Create App-->
-    <!--begin::Modal - New Address-->
-    
-    <!--end::Modal - New Address-->
-    <!--begin::Modal - Users Search-->
-    
-    <!--end::Modal - Users Search-->
-    <!--begin::Modal - Invite Friends-->
-    
-    <!--end::Modal - Invite Friend-->
-    <!--end::Modals-->
-
-    <!--begin::Javascript-->
     <script>
         var hostUrl = "/metronic8/demo39/assets/";
     </script>
@@ -247,6 +258,66 @@
     <!--end::Custom Javascript-->
 
     @stack('scripts')
+
+    <script>
+        // ketika #change-password di klik maka tampilkan modal edit password
+        $('#change-password').on('click', function() {
+            $('#editPasswordModal').modal('show');
+        });
+
+        // ketika form edit password di submit
+        $('#editPasswordForm').on('submit', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+            var formData = new FormData(form[0]);
+
+            var loadingIndicator = $('<span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>');
+            $(form).find('#submit').append(loadingIndicator);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                beforeSend: function () {
+                    loadingIndicator.show();
+                    $('.error-text').text('');
+                    $('.submit-btn').attr('disabled', true).find('.btn-text').addClass('d-none');
+                    $('.submit-btn').find('.spinner-border').removeClass('d-none');
+                    $(form).find('.btn-primary').attr('disabled', true);
+                    $(form).find('.btn-primary .indicator-label').hide();
+                },
+                success: function (response) {
+                    if (response.code === 200) {
+                        toastr.success(response.message, 'Success');
+                        $('#editPasswordModal').modal('hide');
+                        form[0].reset();
+                    } else {
+                        toastr.error(response.message, 'Error');
+                    }
+                },
+                error: function (xhr) {
+                    if (xhr.status === 422) {
+                        var errors = xhr.responseJSON.errors;
+                        $.each(errors, function (key, value) {
+                            $('.' + key + '_error').text(value[0]);
+                        });
+                    } else {
+                        toastr.error(xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan.');
+                    }
+                },
+                complete: function () {
+                    loadingIndicator.hide();
+                    $('.submit-btn').attr('disabled', false).find('.btn-text').removeClass('d-none');
+                    $('.submit-btn').find('.spinner-border').addClass('d-none');
+                    $(form).find('.btn-primary').attr('disabled', false);
+                    $(form).find('.btn-primary .indicator-label').show();
+                }
+            });
+        });
+    </script>
 
     <!--end::Javascript-->
 </body>

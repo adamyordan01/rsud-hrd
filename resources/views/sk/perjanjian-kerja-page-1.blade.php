@@ -91,50 +91,51 @@
     @php
         use App\Helpers\HijriDateHelper;
         use App\Helpers\Denominator;
+        use App\Helpers\UtilityHelper;
 
-        $tanggal = (int) date('d', strtotime($results->tgl_sk));
-        // var_dump(date('d', strtotime($results->tgl_sk)));
+        $tanggal = (int) date('d', strtotime($result->tgl_sk));
+        // var_dump(date('d', strtotime($result->tgl_sk)));
         // var_dump($tanggal);
         // die;
 
-        // buat hari, tanggal, bulan, tahun dalam bentuk seperti tanggal senin tujuh januari dua ribu dua puluh empat dari $results->tgl_sk
+        // buat hari, tanggal, bulan, tahun dalam bentuk seperti tanggal senin tujuh januari dua ribu dua puluh empat dari $result->tgl_sk
         $hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         $bulan = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
 
         // buatkan fungsi penyebut untuk mengubah angka menjadi huruf
-        function penyebut($nilai) {
-            $huruf = array('','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas');
-            if ($nilai < 12) {
-                return ' ' . $huruf[$nilai];
-            } elseif ($nilai < 20) {
-                return penyebut($nilai - 10) . ' Belas';
-            } elseif ($nilai < 100) {
-                return penyebut($nilai / 10) . ' Puluh' . penyebut($nilai % 10);
-            } elseif ($nilai < 200) {
-                return ' Seratus' . penyebut($nilai - 100);
-            } elseif ($nilai < 1000) {
-                return penyebut($nilai / 100) . ' Ratus' . penyebut($nilai % 100);
-            } elseif ($nilai < 2000) {
-                return ' Seribu' . penyebut($nilai - 1000);
-            } elseif ($nilai < 1000000) {
-                return penyebut($nilai / 1000) . ' Ribu' . penyebut($nilai % 1000);
-            } elseif ($nilai < 1000000000) {
-                return penyebut($nilai / 1000000) . ' Juta' . penyebut($nilai % 1000000);
-            }
-        }
+        // function penyebut($nilai) {
+        //     $huruf = array('','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas');
+        //     if ($nilai < 12) {
+        //         return ' ' . $huruf[$nilai];
+        //     } elseif ($nilai < 20) {
+        //         return penyebut($nilai - 10) . ' Belas';
+        //     } elseif ($nilai < 100) {
+        //         return penyebut($nilai / 10) . ' Puluh' . penyebut($nilai % 10);
+        //     } elseif ($nilai < 200) {
+        //         return ' Seratus' . penyebut($nilai - 100);
+        //     } elseif ($nilai < 1000) {
+        //         return penyebut($nilai / 100) . ' Ratus' . penyebut($nilai % 100);
+        //     } elseif ($nilai < 2000) {
+        //         return ' Seribu' . penyebut($nilai - 1000);
+        //     } elseif ($nilai < 1000000) {
+        //         return penyebut($nilai / 1000) . ' Ribu' . penyebut($nilai % 1000);
+        //     } elseif ($nilai < 1000000000) {
+        //         return penyebut($nilai / 1000000) . ' Juta' . penyebut($nilai % 1000000);
+        //     }
+        // }
 
-        $hari_ttd = tanggal_indo($results->tgl_sk);
+        $hari_ttd = tanggal_indo($result->tgl_sk);
 
-        $cetak_hari = $hari[date('w', strtotime($results->tgl_sk))];
-        $cetak_bulan = $bulan[date('m', strtotime($results->tgl_sk))];
+        $cetak_hari = $hari[date('w', strtotime($result->tgl_sk))];
+        $cetak_bulan = $bulan[date('m', strtotime($result->tgl_sk))];
 
         $gelar_depan_direktur = $direktur->gelar_depan ? $direktur->gelar_depan . ' ' : '';
         $gelar_belakang_direktur = $direktur->gelar_belakang ? $direktur->gelar_belakang : '';
         $nama_direktur = $gelar_depan_direktur . $direktur->nama . $gelar_belakang_direktur;
 
-        $gelar_depan_karyawan = $results->gelar_depan ? $results->gelar_depan . ' ' : '';
-        $gelar_belakang_karyawan = $results->gelar_belakang ? $results->gelar_belakang : '';
-        $nama_karyawan = $gelar_depan_karyawan . $results->nama . $gelar_belakang_karyawan;
+        $gelar_depan_karyawan = $result->gelar_depan ? $result->gelar_depan . ' ' : '';
+        $gelar_belakang_karyawan = $result->gelar_belakang ? $result->gelar_belakang : '';
+        $nama_karyawan = $gelar_depan_karyawan . $result->nama . $gelar_belakang_karyawan;
     @endphp
     
     <div class="all">
@@ -169,7 +170,7 @@
                 TENAGA KONTRAK
             </p>
             <p style="margin:0;padding:8px;">
-                Nomor : Peg. 445/{{ $results->no_per_kerja }}/PKS/{{ $results->tahun_sk }}
+                Nomor : Peg. 445/{{ $result->no_per_kerja }}/PKS/{{ $result->tahun_sk }}
             </p>
         </div>
         <table width="90%" style="margin:0 auto;margin-top:20px;">
@@ -188,7 +189,7 @@
                         {{-- ".$bulan[date_format($result['TGL_SK'], 'm')]." --}}
                         {{ $cetak_bulan }}
                     </b> Tahun 
-                    <b style='text-transform:capitalize;'>{{ penyebut(date('Y', strtotime($results->tgl_sk))) }}</b>, kami yang bertanda tangan di bawah ini :
+                    <b style='text-transform:capitalize;'>{{ penyebut(date('Y', strtotime($result->tgl_sk))) }}</b>, kami yang bertanda tangan di bawah ini :
                 </td>
             </tr>
             <tr>
@@ -254,7 +255,7 @@
                 <td class='text-center'>:</td>
                 <td colspan='2' class='p-5'>
                     {{-- ".$result['NO_KTP']." --}}
-                    {{ $results->no_ktp }}
+                    {{ $result->no_ktp }}
                 </td>
             </tr>
             <tr>
@@ -263,7 +264,7 @@
                 <td class='text-center'>:</td>
                 <td colspan='2' class='p-5'>
                     {{-- ".$result['KD_KARYAWAN']." --}}
-                    {{ $results->kd_karyawan }}
+                    {{ $result->kd_karyawan }}
                 </td>
             </tr>
             <tr>
@@ -273,7 +274,7 @@
                 <td colspan='2' class='p-5'>
                     {{-- ".$result['TEMPAT_LAHIR'].", ".tgl_indo(date_format($result['TGL_LAHIR'], --}}
                     {{-- 'Y-m-d'))." --}}
-                    {{ $results->tempat_lahir }}, {{ tanggal_indo($results->tgl_lahir) }}
+                    {{ $result->tempat_lahir }}, {{ tanggal_indo($result->tgl_lahir) }}
                 </td>
             </tr>
             <tr>
@@ -282,7 +283,7 @@
                 <td class='text-center'>:</td>
                 <td colspan='2' class='p-5'>
                     {{-- ".$result['JENJANG_DIDIK']." - ".$result['JURUSAN']." --}}
-                    {{ $results->jenjang_didik }} - {{ $results->jurusan }}
+                    {{ $result->jenjang_didik }} - {{ $result->jurusan }}
                 </td>
             </tr>
             <tr>
@@ -291,7 +292,7 @@
                 <td class='text-center'>:</td>
                 <td colspan='2' class='p-5'>
                     {{-- ".$result['JENIS_KELAMIN']." --}}
-                    {{ $results->jenis_kelamin }}
+                    {{ $result->jenis_kelamin }}
                 </td>
             </tr>
             <tr>
@@ -309,7 +310,7 @@
                     Kedua belah pihak sepakat mengadakan Perjanjian Kerja Tenaga Kontrak pada Rumah Sakit Umum Daerah Langsa untuk jenis objek pekerjaan adalah 
                     <b>
                         {{-- TENAGA ".$result['SUB_DETAIL']." --}}
-                        TENAGA {{ $results->sub_detail }}
+                        TENAGA {{ $result->sub_detail }}
                     </b> 
                     yang diatur dalam pasal-pasal sebagai berikut:</td>
             </tr>

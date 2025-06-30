@@ -230,6 +230,7 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
         'PDF' => Mccarlosen\LaravelMpdf\Facades\LaravelMpdf::class,
         'Image' => Intervention\Image\Facades\Image::class,
+        'PhotoHelper' => App\Helpers\PhotoHelper::class,
         
     ],
 

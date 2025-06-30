@@ -90,13 +90,13 @@
     @php
         use App\Helpers\HijriDateHelper;
 
-        $gelar_depan = $getVerifikasi->gelar_depan ? $getVerifikasi->gelar_depan . ". " : "";
-        $gelar_belakang = $getVerifikasi->gelar_belakang ? " " . $getVerifikasi->gelar_belakang : "";
+        $gelar_depan = $getVerifikasi->gelar_depan ? $getVerifikasi->gelar_depan . " " : "";
+        $gelar_belakang = $getVerifikasi->gelar_belakang ? $getVerifikasi->gelar_belakang : "";
         $nama = $getVerifikasi->nama;
         $nama_lengkap = $gelar_depan . $nama . $gelar_belakang;
 
         $gelar_depan_direktur = $getDirektur->gelar_depan ? $getDirektur->gelar_depan . " " : "";
-        $gelar_belakang_direktur = $getDirektur->gelar_belakang ? " " . $getDirektur->gelar_belakang : "";
+        $gelar_belakang_direktur = $getDirektur->gelar_belakang ? $getDirektur->gelar_belakang : "";
         $nama_direktur = $getDirektur->nama;
         $nama_lengkap_direktur = $gelar_depan_direktur . $nama_direktur . $gelar_belakang_direktur;
 
@@ -105,8 +105,8 @@
         // } else {
         //     $jenistenaga = "";
         // }
-        $jenis_tenaga = $getDataLama->jenis_tenaga;
-        $ruangan = $getDataLama->ruangan;
+        $jenis_tenaga = $getDataLama->jenis_tenaga ?? "";
+        $ruangan = $getDataLama->ruangan ?? "";
 
         if ($jenis_tenaga != "" && $ruangan != "") {
             $jenistenaga = "<br>" . $jenis_tenaga . " PADA " . $ruangan;
@@ -151,14 +151,17 @@
                             RUMAH SAKIT UMUM DAERAH LANGSA
                         </b>
                         <br>
-                        <b style="font-size: 8pt; margin-top: 0px;font-weight: 500">
-                            Alamat : Jln. Jend. A. Yani No.1 Kota Langsa - Provinsi Pemerintah Aceh, Telp. (0641) 22051 - 22800 (IGD)</b>
-                            <br>
-                        <b style="font-size: 8pt; margin-top: 0px;font-weight: 500">
-                            Fax. (0641) 22051, E-mail : rsudlangsa.aceh@gmail.com, rsud@langsakota.go.id,
+                        <b style="font-size: 9pt; margin-top: 0px; font-weight: 600">
+                            Alamat : Jln. Jend. A. Yani No.1 Kota Langsa - Provinsi Pemerintah Aceh</b>
+                        <br>
+                        <b style="font-size: 9pt; margin-top: 0px; font-weight: 600">
+                            Telp. (0641) 22051 - 22800 (IGD) Fax. (0641) 22051</b>
+                        <br>
+                        <b style="font-size: 9pt; margin-top: 0px; font-weight: 600">
+                            E-mail : rsudlangsa.aceh@gmail.com, rsud@langsakota.go.id,
                         </b>
                         <br>
-                        <b style="font-size: 8pt; margin-top: 0px;font-weight: 500">
+                        <b style="font-size: 9pt; margin-top: 0px; font-weight: 600">
                             Website : www.rsud.langsakota.go.id
                         </b>
                         </br>
@@ -172,7 +175,11 @@
         </div>
         <label style="margin-top: 10px">
             <b style="font-size: 14pt; margin-bottom: 0px;">
-                <u>NOTA TUGAS</u>
+                {{-- @if ($kd_jenis_mutasi == 1) --}}
+                    <u>NOTA TUGAS</u>
+                {{-- @elseif ($kd_jenis_mutasi == 3) --}}
+                    {{-- <u>NOTA TUGAS TAMBAHAN</u> --}}
+                {{-- @endif --}}
             </b>
         </label>
         <br>

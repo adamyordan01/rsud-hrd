@@ -46,5 +46,24 @@
                 </a>
             </div>
         @endif
+
+        <div class="menu-item px-3">
+            <a 
+                href="javascript:void(0)"
+                class="menu-link px-3 delete-str"
+                data-karyawan="{{ $str->kd_karyawan }}"
+                data-urut="{{ $str->urut_str }}"
+                data-no-str="{{ $str->no_str }}"
+            >
+                <i class="ki-duotone ki-trash fs-3 me-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                    <span class="path4"></span>
+                    <span class="path5"></span>
+                </i>
+                Hapus
+            </a>
+        </div>
     </div>
 </div>

@@ -76,8 +76,7 @@
 @section('content')
     <div id="kt_app_content" class="app-content  flex-column-fluid ">
         <div id="kt_app_content_container" class="app-container  container-fluid ">
-            <div class="card">
-                
+            <div class="card mb-5">
                 <div class="card-header align-items-center py-5 gap-2 gap-md-5 border-0">
                     <div class="card-title">
                         <div class="d-flex align-items-center position-relative my-1">
@@ -85,211 +84,40 @@
                             <input 
                                 type="text"
                                 data-kt-sk-table-filter="search"
-                                class="form-control form-control-solid w-300px ps-12" placeholder="Cari Karyawan">
+                                class="form-control form-control-solid w-300px ps-12" 
+                                placeholder="Cari SK atau Karyawan">
                         </div>
                     </div>
-
-                    <div class="card-toolbar flex-row-fluid justify-content-end gap-5">
-                        <div class="w-100 mw-150px">
-                            <select class="form-select form-select-solid" id="tahun_sk" data-control="select2" data-placeholder="Pilih Tahun SK" data-allow-clear="true">
-                                <option></option>
-                                @for ($i = date('Y'); $i >= 2021; $i--)
-                                    <option
-                                        value="{{ $i }}"
-                                        {{ request()->get('tahun_sk') == $i ? 'selected' : '' }}
-                                    >
-                                        {{ $i }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
+                    <div class="card-toolbar">
+                        <select 
+                            class="form-select form-select-solid" 
+                            data-kt-sk-table-filter="tahun" 
+                            id="tahun-filter">
+                            @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
+                                <option value="{{ $i }}" {{ $tahun == $i ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
                     </div>
                 </div>
-                <div class="card-body pt-0">
-
-                    <div id="kt_customers_table_wrapper" class="dataTables_wrapper dt-bootstrap4 no-footer">
+                <div class="card-body ps-lg-12 pt-lg-0 pb-lg-0">
+                    <div class="row g-5 mb-5" id="list-sk">
                         <div class="table-responsive">
-                            <table id="sk-table" class="table align-middle table-row-dashed table-bordered fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold">
+                            <table class="table table-bordered table-stripped align-middle" id="sk-table">
                                 <thead>
                                     <tr>
-                                        <th class="min-w35px text-center">
-                                            No
-                                        </th>
+                                        <th class="min-w-35px text-center">No</th>
                                         <th>Nomor Konsederan</th>
                                         <th class="text-center">Jumlah Pegawai</th>
                                         <th>Identitas Pegawai</th>
                                         <th class="text-center">TMT. Aktif</th>
                                         <th class="text-center">Tgl. SK</th>
                                         <th class="text-center">Status</th>
-                                        <th class="min-w-125px text-center">Action</th>
+                                        <th class="min-w-125px text-center">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @foreach ($skKontrak as $item)
-                                    @php
-                                        if (empty($item->nomor_konsederan)) {
-                                            $urut = $item->urut;
-                                            $getKaryawan = DB::table('view_tampil_karyawan as vtk')
-                                                ->select('vtk.kd_karyawan', 'vtk.gelar_depan', 'vtk.nama', 'vtk.gelar_belakang')
-                                                ->where('vtk.kd_karyawan', function ($query) use ($urut) {
-                                                    $query->select('hspk.kd_karyawan')
-                                                        ->from('hrd_sk_pegawai_kontrak as hspk')
-                                                        ->where('hspk.urut', $urut)
-                                                        ->limit(1);
-                                                })
-                                                ->first();
-                                            $nama = $getKaryawan ? $getKaryawan->kd_karyawan."<br>".$getKaryawan->gelar_depan." ".$getKaryawan->nama.$getKaryawan->gelar_belakang : "~";
-                                        } else {
-                                            $nama = "~";
-                                        }
-                        
-                                        $datas = "";
-                                        $status = "";
-                                        $button = "";
-
-                                        $filePathTte = $item->path_dokumen ?? '';
-                                        $urlFilePathtte = Storage::url($filePathTte);
-                        
-                                        if ($item->verif_1 == 0) {
-                                            $status = "Menunggu verifikasi Kasubbag. Kepegawaian";
-                                            $datas = "data-urut='$item->urut' data-tahun='$item->tahun_sk' data-kode='verif1' data-url='".route('admin.sk-kontrak.first-verification')."'";
-                        
-                                            if ($jabatan == 19 || $ruangan == 57) {
-                                                $button = "
-                                                    <a href='javascript:void(0)' class='btn btn-info btn-sm d-block mb-2' title='Verifikasi Kasubbag. Kepegawaian' $datas data-bs-toggle='modal' data-bs-target='#kt_modal_verif' id='verif1'>
-                                                        <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i> 
-                                                        Verifikasi Ka.Sub.Bag. Kepeg.
-                                                    </a>";
-                                            }
-                                        } elseif ($item->verif_2 == 0) {
-                                            $status = "Menunggu verifikasi Kabag. TU";
-                                            $datas = "data-urut='$item->urut' data-tahun='$item->tahun_sk' data-kode='verif2' data-url='".route('admin.sk-kontrak.second-verification')."'";
-                        
-                                            if ($jabatan == 7 || $ruangan == 57) {
-                                                $button = "
-                                                    <a href='javascript:void(0)'
-                                                        class='btn btn-primary btn-sm d-block mb-2'
-                                                        title='Verifikasi Kabag. TU'
-                                                        $datas 
-                                                        data-bs-toggle='modal' data-bs-target='#kt_modal_verif' id='verif2'
-                                                    >
-                                                        <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i> 
-                                                        Verifikasi Ka.Bag. Tata Usaha
-                                                    </a>";
-                                            }
-                                        } elseif ($item->verif_3 == 0) {
-                                            $status = "Menunggu verifikasi Wadir ADM dan Umum";
-                                            $datas = "data-urut='$item->urut' data-tahun='$item->tahun_sk' data-kode='verif3' data-url='".route('admin.sk-kontrak.third-verification')."'";
-                        
-                                            if ($jabatan == 3 || $ruangan == 57) {
-                                                $button = "
-                                                    <a 
-                                                        href='javascript:void(0)'
-                                                        class='btn btn-success btn-sm d-block mb-2'
-                                                        title='Verifikasi Wadir ADM dan Umum' 
-                                                        $datas 
-                                                        data-bs-toggle='modal' data-bs-target='#kt_modal_verif' id='verif3'
-                                                    >
-                                                        <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i> 
-                                                        Verifikasi Wadir ADM dan Umum
-                                                    </a>";
-                                            }
-                                        } elseif ($item->verif_4 == 0) {
-                                            $status = "Menunggu verifikasi Direktur";
-                                            $datas = "data-urut='$item->urut' data-tahun='$item->tahun_sk' data-kode='verif4' data-url='".route('admin.sk-kontrak.fourth-verification')."'";
-                        
-                                            if ($jabatan == 1 || $ruangan == 57) {
-                                                $button = "
-                                                    <a href='javascript:void(0)'
-                                                        class='btn btn-warning btn-sm d-block mb-2'
-                                                        title='Verifikasi Direktur'
-                                                        $datas
-                                                        
-                                                        
-                                                        id='verif4'
-                                                    >
-                                                        <i class='ki-duotone ki-double-check fs-2'><span class='path1'></span><span class='path2'></span></i> 
-                                                        Verifikasi Direktur
-                                                    </a>";
-                                            }
-                                        } else {
-                                            $status = "Telah diverifikasi";
-
-                                            if ($item->nomor_konsederan == "") {
-                                                $sk = "<a 
-                                                        href='$urlFilePathtte'
-                                                        class='btn btn-danger btn-sm d-block mb-2' title='SK' target='_blank'
-                                                    >
-                                                        <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Cetak SK
-                                                    </a>";
-
-                                                $button = $sk;
-                                            } else {
-                                                $sk = "<a 
-                                                            href='$urlFilePathtte'
-                                                            class='btn btn-danger btn-sm d-block mb-2' title='SK' target='_blank'
-                                                        >
-                                                            <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Cetak SK
-                                                        </a>";
-                                                $konsederan = "<a href='module/sk/print_konsederan.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-success btn-sm d-block mb-2' title='Konsederan' target='_blank'>
-                                                                    <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Konsederan
-                                                                </a>";
-                                                $serahTerima = "<a href='module/sk/print_serahterima.php?data=$item->urut&thn=$item->tahun_sk' class='btn btn-info btn-sm d-block mb-2' title='Lembar Serah Terima' target='_blank'>
-                                                                    <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i> Serah Terima
-                                                                </a>";
-                                                $button = $sk.$konsederan.$serahTerima;
-                                            }
-                                        }
-                                    @endphp
-
-                                        <tr>
-                                            <td class="text-center">
-                                                {{-- loop iteration with increment when page change --}}
-                                                {{-- {{ $loop->iteration + ($skKontrak->perPage() * ($skKontrak->currentPage() - 1)) }} --}}
-                                                {{ $loop->iteration }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ ($item->no_sk == "") ? "-" : "Peg. 445/".$item->no_sk."/SK/".$item->tahun_sk }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ $item->jumlah_pegawai }}
-                                            </td>
-                                            <td>
-                                                {!! $nama !!}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ $item->tgl_sk ? date('d-m-Y', strtotime($item->tgl_sk)) : '' }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ $item->tgl_ttd ? date('d-m-Y', strtotime($item->tgl_ttd)) : '' }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ $status }}
-                                            </td>
-                                            <td class="">
-                                                {!! $button !!}
-                                                <a
-                                                    {{-- href='module/sk/print_pkerja.php?data={{ $item->urut }}&thn={{ $item->tahun_sk }}'  --}}
-                                                    href="{{ route('admin.sk-kontrak.print-perjanjian-kerja', ['urut' => $item->urut, 'tahun' => $item->tahun_sk]) }}"
-                                                    class='btn btn-warning btn-sm d-block mb-2'
-                                                    title='Perjanjian Kerja' target='_blank'
-                                                >
-                                                    <i class='ki-duotone ki-printer fs-2'><span class='path1'></span><span class='path2'></span><span class='path3'></span><span class='path4'></span><span class='path5'></span></i>
-                                                    Perjanjian Kerja
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
                             </table>
                         </div>
                     </div>
-                    {{-- <div class="d-flex flex-stack flex-wrap pt-10">
-                        <div class="fs-6 fw-semibold text-gray-700">
-                            Menampilkan {{ $skKontrak->firstItem() }} sampai {{ $skKontrak->lastItem() }} dari {{ $skKontrak->total() }} data
-                        </div>
-                        {{ $skKontrak->links() }}
-                    </div> --}}
                 </div>
             </div>
         </div>
@@ -516,75 +344,146 @@
             }
         });
 
-
-        var KTSKList = (function () {
-            var table,
-            $table = $('#sk-table');
-
-            return {
-                init: function () {
-                    if ($table.length) {
-                        table = $table.DataTable({
-                            info: true,
-                            order: [],
-                            // pageLength: 10,
-                            displayLength: 10,
-                            lengthChange: true,
-                            columnDefs: [
-                                { orderable: false, targets: [0, 7] }
-                                // { orderable: false, targets: 7 },
-                            ],
-                        });
-
-                        $('[data-kt-sk-table-filter="search"]').on("keyup", function () {
-                            // table.search($(this).val()).draw();
-                            table.column(3).search($(this).val()).draw();
-                        });
-
-                        $('[data-kt-user-table-filter="reset"]').on("click", function () {
-                            $('[data-kt-user-table-filter="form"] select').val("").trigger("change");
-                            table.search("").draw();
-                        });
-
-                        $('[data-kt-user-table-filter="form"] [data-kt-user-table-filter="filter"]').on("click", function () {
-                            var filterString = "";
-                            $('[data-kt-user-table-filter="form"] select').each(function (index) {
-                                // if (this.value && this.value !== "") {
-                                //     if (index !== 0) {
-                                //         filterString += " ";
-                                //     }
-                                //     filterString += this.value;
-                                // }
-                                if (this.value) {
-                                    filterString += (index !== 0 ? " " : "") + this.value;
-                                }
-                            });
-                            table.search(filterString).draw();
-                        });
-                    }
-                },
-            };
-        })();
-
-        function toggleButtonState(buttonSelector, tableSelector) {
-            let isAnyChecked = $(tableSelector + ' .form-check-input:checked').length > 0;
-            $(buttonSelector).attr('disabled', !isAnyChecked);
-        }
-
         function showModal(title) {
             $('#verif-title').text(title);
             // $('#rincian-verif').html($(rincianId).html());
             $('#kt_modal_verif').modal('show');
         }
 
+        var skTable;
+
+        function toggleButtonState(buttonSelector, tableSelector) {
+            let isAnyChecked = $(tableSelector + ' .form-check-input:checked').length > 0;
+            $(buttonSelector).attr('disabled', !isAnyChecked);
+        }
+         
+        // Fungsi untuk reload tabel setelah verifikasi
+        function reloadDataTables() {
+            if (skTable) {
+                $('.search-spinner').show();
+                skTable.ajax.reload(function() {
+                    $('.search-spinner').hide();
+                }, false); // false agar tidak reset page
+            }
+        }
+
         $(document).ready(function () {
-            KTSKList.init();
+            // Tambahkan indikator loading
+            var searchIndicator = $('<span class="spinner-border spinner-border-sm text-primary ms-2 search-spinner" role="status" aria-hidden="true" style="display: none;"></span>');
+            $('[data-kt-sk-table-filter="search"]').after(searchIndicator);
 
-            $('#tahun_sk').on('change', function () {
-                var tahun = $(this).val();
-                let url = '{{ route("admin.sk-kontrak.index") }}' + (tahun ? '?tahun_sk=' + tahun : '');
+            // Fungsi debounce untuk menunda eksekusi
+            function debounce(func, wait, immediate) {
+                var timeout;
+                return function() {
+                    var context = this, args = arguments;
+                    var later = function() {
+                        timeout = null;
+                        if (!immediate) func.apply(context, args);
+                    };
+                    var callNow = immediate && !timeout;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                    if (callNow) func.apply(context, args);
+                };
+            }
 
-                window.location.href = url;
+
+            skTable = $('#sk-table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ route('admin.sk-kontrak.datatable') }}",
+                    type: 'GET',
+                    data: function(d) {
+                        d.tahun = $('#tahun-filter').val();
+                    },
+                    beforeSend: function() {
+                        // Tampilkan loading indicator saat memuat data
+                        if (skTable && skTable.context[0].searching) {
+                            $('.search-spinner').show();
+                        }
+                    },
+                    complete: function() {
+                        // Sembunyikan loading indicator setelah selesai
+                        $('.search-spinner').hide();
+                    }
+                },
+                columns: [
+                    {data: 'DT_RowIndex', name: 'DT_RowIndex', searchable: false},
+                    { 
+                        data: 'no_sk', 
+                        name: 'no_sk', 
+                        className: 'text-center' 
+                    },
+                    { 
+                        data: 'jumlah_pegawai', 
+                        name: 'jumlah_pegawai', 
+                        className: 'text-center',
+                        searchable: false
+                    },
+                    { 
+                        data: 'nama', 
+                        name: 'nama' 
+                    },
+                    { 
+                        data: 'tgl_sk', 
+                        name: 'tgl_sk', 
+                        className: 'text-center',
+                        searchable: false
+                    },
+                    { 
+                        data: 'tgl_ttd', 
+                        name: 'tgl_ttd', 
+                        className: 'text-center',
+                        searchable: false 
+                    },
+                    { 
+                        data: 'status', 
+                        name: 'verif_1', 
+                        className: 'text-center',
+                        searchable: false
+                    },
+                    { 
+                        data: 'aksi', 
+                        name: 'aksi', 
+                        orderable: false, 
+                        searchable: false,
+                        className: 'text-center' 
+                    }
+                ],
+                order: [[1, 'desc']], // Urutkan berdasarkan no_sk secara default
+                drawCallback: function(settings) {
+                    // Callback setelah tabel digambar
+                    $('.search-spinner').hide();
+                }
+            });
+
+            // Gunakan variabel untuk melacak status pencarian terakhir
+            var lastSearchValue = '';
+            
+            // Event untuk pencarian dengan debounce
+            var debouncedSearch = debounce(function(value) {
+                // Hanya lakukan pencarian jika nilai berubah
+                if (value !== lastSearchValue) {
+                    lastSearchValue = value;
+                    $('.search-spinner').show();
+                    skTable.search(value).draw();
+                }
+            }, 500);
+
+            // Event untuk pencarian
+            $('[data-kt-sk-table-filter="search"]').on('keyup', function() {
+                var value = $(this).val();
+                debouncedSearch(value);
+            });
+
+            // Event untuk filter tahun
+            $('#tahun-filter').on('change', function() {
+                $('.search-spinner').show();
+                skTable.ajax.reload(function() {
+                    $('.search-spinner').hide();
+                });
             });
 
             // jika #tujuan yang dipilih adalah single maka tampilkan #karyawan, jika memilih all maka tampilkan #konsederan
@@ -769,7 +668,10 @@
                         timer: 1500
                     }).then((result) => {
                         if (response.code == 200) {
-                            window.location.reload();
+                            // lakukan reload datatable
+                            reloadDataTables();
+                            $('#kt_modal_add_sk').modal('hide');
+                            $('#add_sk')[0].reset();
                         }
                     });
                 },
@@ -893,7 +795,15 @@
                                         showConfirmButton: true,
                                     }).then((result) => {
                                         if (result.isConfirmed) {
-                                            window.location.reload();
+                                            // reload datatable
+                                            reloadDataTables();
+                                            $('#kt_modal_verif').modal('hide');
+                                            $('#kt_rincian_verif_1_table').html('');
+                                        } else {
+                                            // reload datatable
+                                            reloadDataTables();
+                                            $('#kt_modal_verif').modal('hide');
+                                            $('#kt_rincian_verif_1_table').html('');
                                         }
                                     })
                                 } else {
@@ -1225,8 +1135,11 @@
 
                                 // tutup modal finalisasi, kemudian setelah 1.5 detik reload halaman
                                 setTimeout(() => {
+                                    // $('#kt_modal_finalisasi').modal('hide');
+                                    // window.location.reload();
+                                    // reload datatable
+                                    reloadDataTables();
                                     $('#kt_modal_finalisasi').modal('hide');
-                                    window.location.reload();
                                 }, 1500);
 
 
@@ -1277,7 +1190,11 @@
                                         allowOutsideClick: false,
                                     }).then((result) => {
                                         if (result.isConfirmed) {
-                                            window.location.reload();
+                                            // window.location.reload();
+                                            // reload datatable
+                                            reloadDataTables();
+                                            $('#kt_modal_finalisasi').modal('hide');
+                                            $('#kt_rincian_verif_1_table').html('');
                                         }
                                     });
                                 }

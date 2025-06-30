@@ -177,7 +177,7 @@
                     {{-- Surat Perjanjian Kerja Tenaga Kontrak ini berlaku untuk jangka
                     waktu 1 (satu) tahun terhitung mulai tanggal 1 Januari ".$_GET["thn']." sampai dengan tanggal 31
                     Desember ".$_GET['thn'].". --}}
-                    Surat Perjanjian Kerja Tenaga Kontrak ini berlaku untuk jangka waktu 1 (satu) tahun terhitung mulai tanggal 1 Januari {{ date('Y', strtotime($results->tgl_sk)) }} sampai dengan tanggal 31 Desember {{ date('Y', strtotime($results->tgl_sk)) }}.
+                    Surat Perjanjian Kerja Tenaga Kontrak ini berlaku untuk jangka waktu 1 (satu) tahun terhitung mulai tanggal 1 Januari {{ date('Y', strtotime($result->tgl_sk)) }} sampai dengan tanggal 31 Desember {{ date('Y', strtotime($result->tgl_sk)) }}.
                 </td>
             </tr>
             <tr>
