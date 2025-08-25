@@ -80,17 +80,19 @@ return [
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
-            'url' => '',
-            'host' => '127.0.0.1',
-            'port' => '',
-            'database' => 'HRD',
-            'username' => 'sa',
-            'password' => '1Tlangsa',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', 'localhost'),
+            'port' => env('DB_PORT', '1433'),
+            'database' => env('DB_DATABASE', 'forge'),
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
+            'encrypt' => env('DB_ENCRYPT', 'no'),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
             'options' => [
-                PDO::ATTR_CASE => PDO::CASE_LOWER,
+                PDO::ATTR_CASE => PDO::CASE_LOWER
             ],
         ],
 
