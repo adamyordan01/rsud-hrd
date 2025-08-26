@@ -455,6 +455,72 @@
                                     <span class="menu-title">Daftar Struktural</span>
                             </a>
                         </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.kepala-ruangan.*')) active @endif"
+                                href="{{ route('admin.laporan.kepala-ruangan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Kepala Ruangan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.koordinator.*')) active @endif"
+                                href="{{ route('admin.laporan.koordinator.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Koordinator</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.rekap-pegawai.*')) active @endif"
+                                href="{{ route('admin.laporan.rekap-pegawai.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Rekap Pegawai Aktif</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.rekap-ruangan.*')) active @endif"
+                                href="{{ route('admin.laporan.rekap-ruangan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Rekap Pegawai Per-Ruangan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.jenjang-pendidikan.*')) active @endif"
+                                href="{{ route('admin.laporan.jenjang-pendidikan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jenjang Pendidikan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.absensi.*')) active @endif"
+                                href="{{ route('admin.laporan.absensi.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Absensi Pegawai</span>
+                            </a>
+                        </div>
                     </div>
                     <!--end:Menu sub-->
                 </div>
@@ -598,6 +664,17 @@
                                         <span class="bullet bullet-dot"></span>
                                     </span>
                                     <span class="menu-title">Bahasa</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.settings.wilayah.*')) active @endif"
+                                href="{{ route('admin.settings.wilayah.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Master Wilayah</span>
                             </a>
                         </div>
 

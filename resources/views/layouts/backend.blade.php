@@ -223,6 +223,8 @@
         var hostUrl = "/metronic8/demo39/assets/";
     </script>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>

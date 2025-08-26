@@ -23,6 +23,8 @@ use App\Http\Controllers\Identitas\CvController;
 use App\Http\Controllers\ChangeProfileController;
 use App\Http\Controllers\MutasiPendingController;
 use App\Http\Controllers\Laporan\PnsUsiaController;
+use App\Http\Controllers\Laporan\AbsensiController;
+use App\Http\Controllers\Laporan\JenjangPendidikanController as LaporanJenjangPendidikanController;
 use App\Http\Controllers\MutasiOnProcessController;
 use App\Http\Controllers\Settings\BahasaController;
 use App\Http\Controllers\MutasiVerifikasiController;
@@ -32,6 +34,10 @@ use App\Http\Controllers\Settings\RuanganController;
 use App\Http\Controllers\SuratIzinPraktikController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Laporan\StrukturalController;
+use App\Http\Controllers\Laporan\KepalaRuanganController;
+use App\Http\Controllers\Laporan\KoordinatorController;
+use App\Http\Controllers\Laporan\RekapPegawaiController;
+use App\Http\Controllers\Laporan\RekapRuanganController;
 use App\Http\Controllers\Settings\PekerjaanController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Karyawan\JenisTenagaController;
@@ -43,6 +49,7 @@ use App\Http\Controllers\Karyawan\KaryawanGolonganController;
 use App\Http\Controllers\Riwayat\RiwayatPendidikanController;
 use App\Http\Controllers\Settings\HubunganKeluargaController;
 use App\Http\Controllers\Settings\TenagaManagementController;
+use App\Http\Controllers\Settings\WilayahController;
 use App\Http\Controllers\Karyawan\KaryawanSuratIzinController;
 use App\Http\Controllers\Settings\JenjangPendidikanController;
 use App\Http\Controllers\Riwayat\BpjsKetenagakerjaanController;
@@ -88,7 +95,7 @@ Route::get('/composer-dump-autoload', function () {
     return 'Composer dump autoload';
 });
 
-// Auth::loginUsingId('000662');
+Auth::loginUsingId('1629');
 
 // Route::get('/migrate-users', MigrateUserController::class);
 
@@ -296,6 +303,51 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             });
     });
 
+    // Master Wilayah - dipindahkan ke group terpisah
+    Route::prefix('settings')
+        ->name('settings.')
+        ->group(function () {
+        Route::prefix('wilayah')
+            ->name('wilayah.')
+            ->group(function () {
+                Route::get('/', [WilayahController::class, 'index'])->name('index');
+
+                // API Routes untuk cascade dropdown (existing)
+                Route::get('api/kabupaten/{provinsiId}', [WilayahController::class, 'getKabupaten'])->name('api.kabupaten');
+                Route::get('api/kecamatan/{kabupatenId}', [WilayahController::class, 'getKecamatan'])->name('api.kecamatan');
+                Route::get('api/kelurahan/{kecamatanId}', [WilayahController::class, 'getKelurahan'])->name('api.kelurahan');
+
+                // New API Routes untuk lazy loading
+                Route::get('load/kabupaten/{provinsiId}', [WilayahController::class, 'loadKabupaten'])->name('load.kabupaten');
+                Route::get('load/kecamatan/{kabupatenId}', [WilayahController::class, 'loadKecamatan'])->name('load.kecamatan');
+                Route::get('load/kelurahan/{kecamatanId}', [WilayahController::class, 'loadKelurahan'])->name('load.kelurahan');
+
+                // Provinsi (Level 1) CRUD
+                Route::post('provinsi', [WilayahController::class, 'storeProvinsi'])->name('provinsi.store');
+                Route::get('provinsi/{id}/edit', [WilayahController::class, 'editProvinsi'])->name('provinsi.edit');
+                Route::patch('provinsi/{id}', [WilayahController::class, 'updateProvinsi'])->name('provinsi.update');
+                Route::delete('provinsi/{id}', [WilayahController::class, 'destroyProvinsi'])->name('provinsi.destroy');
+
+                // Kabupaten (Level 2) CRUD
+                Route::post('kabupaten', [WilayahController::class, 'storeKabupaten'])->name('kabupaten.store');
+                Route::get('kabupaten/{provinsiId}/{kabupatenId}/edit', [WilayahController::class, 'editKabupaten'])->name('kabupaten.edit');
+                Route::patch('kabupaten/{provinsiId}/{kabupatenId}', [WilayahController::class, 'updateKabupaten'])->name('kabupaten.update');
+                Route::delete('kabupaten/{provinsiId}/{kabupatenId}', [WilayahController::class, 'destroyKabupaten'])->name('kabupaten.destroy');
+
+                // Kecamatan (Level 3) CRUD
+                Route::post('kecamatan', [WilayahController::class, 'storeKecamatan'])->name('kecamatan.store');
+                Route::get('kecamatan/{kabupatenId}/{kecamatanId}/edit', [WilayahController::class, 'editKecamatan'])->name('kecamatan.edit');
+                Route::patch('kecamatan/{kabupatenId}/{kecamatanId}', [WilayahController::class, 'updateKecamatan'])->name('kecamatan.update');
+                Route::delete('kecamatan/{kabupatenId}/{kecamatanId}', [WilayahController::class, 'destroyKecamatan'])->name('kecamatan.destroy');
+
+                // Kelurahan (Level 4) CRUD
+                Route::post('kelurahan', [WilayahController::class, 'storeKelurahan'])->name('kelurahan.store');
+                Route::get('kelurahan/{kecamatanId}/{kelurahanId}/edit', [WilayahController::class, 'editKelurahan'])->name('kelurahan.edit');
+                Route::patch('kelurahan/{kecamatanId}/{kelurahanId}', [WilayahController::class, 'updateKelurahan'])->name('kelurahan.update');
+                Route::delete('kelurahan/{kecamatanId}/{kelurahanId}', [WilayahController::class, 'destroyKelurahan'])->name('kelurahan.destroy');
+            });
+    });
+
     Route::middleware(['permission:view_karyawan'])
         ->name('karyawan.')
         ->group(function () {
@@ -497,6 +549,44 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [StrukturalController::class, 'index'])->name('index');
             Route::get('/print', [StrukturalController::class, 'print'])->name('print');
             Route::get('/check-data', [StrukturalController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'kepala-ruangan', 'as' => 'kepala-ruangan.'], function () {
+            Route::get('/', [KepalaRuanganController::class, 'index'])->name('index');
+            Route::get('/print', [KepalaRuanganController::class, 'print'])->name('print');
+            Route::get('/check-data', [KepalaRuanganController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'koordinator', 'as' => 'koordinator.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\KoordinatorController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\KoordinatorController::class, 'print'])->name('print');
+            Route::get('/check-data', [\App\Http\Controllers\Laporan\KoordinatorController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'rekap-pegawai', 'as' => 'rekap-pegawai.'], function () {
+            Route::get('/', [RekapPegawaiController::class, 'index'])->name('index');
+            Route::get('/print', [RekapPegawaiController::class, 'print'])->name('print');
+            Route::get('/check-data', [RekapPegawaiController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'rekap-ruangan', 'as' => 'rekap-ruangan.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\RekapRuanganController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\RekapRuanganController::class, 'print'])->name('print');
+            Route::get('/check-data', [\App\Http\Controllers\Laporan\RekapRuanganController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'jenjang-pendidikan', 'as' => 'jenjang-pendidikan.'], function () {
+            Route::get('/', [LaporanJenjangPendidikanController::class, 'index'])->name('index');
+            Route::get('/get-jurusan', [LaporanJenjangPendidikanController::class, 'getJurusan'])->name('get-jurusan');
+            Route::get('/print', [LaporanJenjangPendidikanController::class, 'print'])->name('print');
+            Route::get('/check-data', [LaporanJenjangPendidikanController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'absensi', 'as' => 'absensi.'], function () {
+            Route::get('/', [AbsensiController::class, 'index'])->name('index');
+            Route::get('/preview', [AbsensiController::class, 'preview'])->name('preview');
+            Route::get('/print', [AbsensiController::class, 'print'])->name('print');
+            Route::get('/check-data', [AbsensiController::class, 'checkData'])->name('check-data');
         });
     });
 });
