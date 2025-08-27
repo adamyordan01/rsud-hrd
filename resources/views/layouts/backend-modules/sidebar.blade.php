@@ -502,12 +502,111 @@
 
                         <div class="menu-item">
                             <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.golongan.*')) active @endif"
+                                href="{{ route('admin.laporan.golongan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Berdasarkan Golongan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
                                 class="menu-link @if (request()->routeIs('admin.laporan.jenjang-pendidikan.*')) active @endif"
                                 href="{{ route('admin.laporan.jenjang-pendidikan.index') }}">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
                                     <span class="menu-title">Jenjang Pendidikan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.per-pendidikan.*')) active @endif"
+                                href="{{ route('admin.laporan.per-pendidikan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jumlah Pegawai Per-Pendidikan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.per-pendidikan-ruangan.*')) active @endif"
+                                href="{{ route('admin.laporan.per-pendidikan-ruangan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jumlah Pegawai Per-Pendidikan Per-Ruangan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.per-jenis-tenaga.*')) active @endif"
+                                href="{{ route('admin.laporan.per-jenis-tenaga.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jumlah Pegawai Per-Jenis Tenaga</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.per-jenis-tenaga-ruangan.*')) active @endif"
+                                href="{{ route('admin.laporan.per-jenis-tenaga-ruangan.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jumlah Pegawai Per-Jenis Tenaga Per-Ruangan</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.data-taspen.*')) active @endif"
+                                href="{{ route('admin.laporan.data-taspen.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Data Taspen</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.satya-lencana.*')) active @endif"
+                                href="{{ route('admin.laporan.satya-lencana.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Satya Lencana</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.jabatan-fungsional.*')) active @endif"
+                                href="{{ route('admin.laporan.jabatan-fungsional.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jabatan Fungsional</span>
+                            </a>
+                        </div>
+
+                        <div class="menu-item">
+                            <a 
+                                class="menu-link @if (request()->routeIs('admin.laporan.surat-izin.*')) active @endif"
+                                href="{{ route('admin.laporan.surat-izin.index') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Surat Izin</span>
                             </a>
                         </div>
 

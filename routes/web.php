@@ -38,6 +38,7 @@ use App\Http\Controllers\Laporan\KepalaRuanganController;
 use App\Http\Controllers\Laporan\KoordinatorController;
 use App\Http\Controllers\Laporan\RekapPegawaiController;
 use App\Http\Controllers\Laporan\RekapRuanganController;
+use App\Http\Controllers\Laporan\PerJenisTenagaController;
 use App\Http\Controllers\Settings\PekerjaanController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Karyawan\JenisTenagaController;
@@ -55,6 +56,8 @@ use App\Http\Controllers\Settings\JenjangPendidikanController;
 use App\Http\Controllers\Riwayat\BpjsKetenagakerjaanController;
 use App\Http\Controllers\Tugas_Tambahan\TugasTambahanController;
 use App\Http\Controllers\Laporan\DaftarUrutKepangakatanController;
+use App\Http\Controllers\Laporan\JabatanFungsionalController;
+use App\Http\Controllers\Laporan\SuratIzinController;
 use App\Http\Controllers\Karyawan\JenjangPendidikanController as KaryawanJenjangPendidikanController;
 
 /*
@@ -575,11 +578,61 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/check-data', [\App\Http\Controllers\Laporan\RekapRuanganController::class, 'checkData'])->name('check-data');
         });
 
+        Route::group(['prefix' => 'golongan', 'as' => 'golongan.'], function () {
+            Route::get('/', [App\Http\Controllers\Laporan\GolonganController::class, 'index'])->name('index');
+            Route::get('/print', [App\Http\Controllers\Laporan\GolonganController::class, 'print'])->name('print');
+        });
+
         Route::group(['prefix' => 'jenjang-pendidikan', 'as' => 'jenjang-pendidikan.'], function () {
             Route::get('/', [LaporanJenjangPendidikanController::class, 'index'])->name('index');
             Route::get('/get-jurusan', [LaporanJenjangPendidikanController::class, 'getJurusan'])->name('get-jurusan');
             Route::get('/print', [LaporanJenjangPendidikanController::class, 'print'])->name('print');
             Route::get('/check-data', [LaporanJenjangPendidikanController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'per-pendidikan', 'as' => 'per-pendidikan.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\PerPendidikanController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\PerPendidikanController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'per-pendidikan-ruangan', 'as' => 'per-pendidikan-ruangan.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\PerPendidikanRuanganController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\PerPendidikanRuanganController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'per-jenis-tenaga', 'as' => 'per-jenis-tenaga.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\PerJenisTenagaController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\PerJenisTenagaController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'per-jenis-tenaga-ruangan', 'as' => 'per-jenis-tenaga-ruangan.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\PerJenisTenagaRuanganController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\PerJenisTenagaRuanganController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'data-taspen', 'as' => 'data-taspen.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\DataTaspenController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\DataTaspenController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'satya-lencana', 'as' => 'satya-lencana.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\SatyaLencanaController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\SatyaLencanaController::class, 'print'])->name('print');
+        });
+
+        Route::group(['prefix' => 'jabatan-fungsional', 'as' => 'jabatan-fungsional.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\JabatanFungsionalController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\JabatanFungsionalController::class, 'print'])->name('print');
+            Route::get('/check-data', [\App\Http\Controllers\Laporan\JabatanFungsionalController::class, 'checkData'])->name('check-data');
+        });
+
+        Route::group(['prefix' => 'surat-izin', 'as' => 'surat-izin.'], function () {
+            Route::get('/', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'index'])->name('index');
+            Route::get('/print', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'print'])->name('print');
+            Route::get('/pdf', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'pdf'])->name('pdf');
+            Route::get('/check-data', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'checkData'])->name('check-data');
+            Route::get('/get-ruangan', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'getRuangan'])->name('get-ruangan');
+            Route::get('/get-kategori-izin', [\App\Http\Controllers\Laporan\SuratIzinController::class, 'getKategoriIzin'])->name('get-kategori-izin');
         });
 
         Route::group(['prefix' => 'absensi', 'as' => 'absensi.'], function () {

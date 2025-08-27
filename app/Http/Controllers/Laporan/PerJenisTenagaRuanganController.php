@@ -1,0 +1,351 @@
+<?php
+
+namespace App\Http\Controllers\Laporan;
+
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+
+class PerJenisTenagaRuanganController extends Controller
+{
+    public function index(Request $request)
+    {
+        if ($request->ajax()) {
+            $bulan = $request->bulan;
+            $tahun = $request->tahun;
+            $kdRuangan = $request->kd_ruangan; // * = semua ruangan, kd_ruangan = ruangan spesifik
+            
+            // Tentukan apakah menggunakan data current atau backup
+            $isCurrentPeriod = ($bulan == date('m') && $tahun == date('Y'));
+            $tableName = $isCurrentPeriod ? 'view_karyawan_perjenistenaga_peruangan' : 'view_karyawan_perjenistenaga_peruangan_backup';
+            
+            $result = [];
+            $grandTotalPNS = $grandTotalPPPK = $grandTotalPartTime = $grandTotalKontrakDaerah = $grandTotalKontrakBlud = $grandTotalTHL = 0;
+            $grandTotalLK = $grandTotalPR = 0;
+            
+            // Query ruangan berdasarkan filter
+            $ruanganQuery = DB::connection('sqlsrv')
+                ->table('hrd_ruangan')
+                ->where('status_aktif', 1)
+                ->orderBy('ruangan');
+                
+            if ($kdRuangan !== '*') {
+                $ruanganQuery->where('kd_ruangan', $kdRuangan);
+            }
+            
+            $ruanganList = $ruanganQuery->get();
+            
+            foreach ($ruanganList as $ruangan) {
+                // Query jenis tenaga per ruangan
+                $jenisTenagaList = DB::connection('sqlsrv')
+                    ->table('hrd_jenis_tenaga')
+                    ->orderBy('kd_jenis_tenaga')
+                    ->get();
+                
+                $ruanganData = [
+                    'ruangan' => $ruangan->ruangan,
+                    'kd_ruangan' => $ruangan->kd_ruangan,
+                    'jenis_tenaga_groups' => [],
+                    'ruangan_total' => [
+                        'pns' => 0,
+                        'pppk' => 0,
+                        'part_time' => 0,
+                        'kontrak_daerah' => 0,
+                        'kontrak_blud' => 0,
+                        'thl' => 0,
+                        'lk' => 0,
+                        'pr' => 0
+                    ]
+                ];
+                
+                $hasDataInRuangan = false;
+                
+                foreach ($jenisTenagaList as $jenisTenaga) {
+                    // Query data per jenis tenaga di ruangan ini
+                    $query = DB::connection('sqlsrv')->table($tableName)
+                        ->where('kd_jenis_tenaga', $jenisTenaga->kd_jenis_tenaga)
+                        ->where('kd_ruangan', $ruangan->kd_ruangan);
+                    
+                    // Jika menggunakan data backup, tambahkan filter bulan dan tahun
+                    if (!$isCurrentPeriod) {
+                        $query->where('bulan_backup', $bulan)
+                              ->where('tahun_backup', $tahun);
+                    }
+                    
+                    $dataDetail = $query->orderBy('ruangan', 'asc')
+                                      ->orderBy('sub_detail', 'asc')
+                                      ->get();
+                    
+                    if ($dataDetail->count() > 0) {
+                        $hasDataInRuangan = true;
+                        
+                        $jenisTenagaData = [
+                            'jenis_tenaga' => $jenisTenaga->jenis_tenaga,
+                            'kd_jenis_tenaga' => $jenisTenaga->kd_jenis_tenaga,
+                            'details' => [],
+                            'subtotal' => [
+                                'pns' => 0,
+                                'pppk' => 0,
+                                'part_time' => 0,
+                                'kontrak_daerah' => 0,
+                                'kontrak_blud' => 0,
+                                'thl' => 0,
+                                'lk' => 0,
+                                'pr' => 0
+                            ]
+                        ];
+                        
+                        foreach ($dataDetail as $item) {
+                            $detailData = [
+                                'sub_detail' => $item->sub_detail,
+                                'pns' => (int)$item->pns,
+                                'pppk' => (int)$item->pppk,
+                                'part_time' => (int)$item->part_time,
+                                'kontrak_daerah' => (int)$item->kontrak_daerah,
+                                'kontrak_blud' => (int)$item->kontrak_blud,
+                                'thl' => (int)($item->thl ?? 0),
+                                'lk' => (int)$item->lk,
+                                'pr' => (int)$item->pr
+                            ];
+                            
+                            $jenisTenagaData['details'][] = $detailData;
+                            
+                            // Akumulasi subtotal per jenis tenaga
+                            $jenisTenagaData['subtotal']['pns'] += $detailData['pns'];
+                            $jenisTenagaData['subtotal']['pppk'] += $detailData['pppk'];
+                            $jenisTenagaData['subtotal']['part_time'] += $detailData['part_time'];
+                            $jenisTenagaData['subtotal']['kontrak_daerah'] += $detailData['kontrak_daerah'];
+                            $jenisTenagaData['subtotal']['kontrak_blud'] += $detailData['kontrak_blud'];
+                            $jenisTenagaData['subtotal']['thl'] += $detailData['thl'];
+                            $jenisTenagaData['subtotal']['lk'] += $detailData['lk'];
+                            $jenisTenagaData['subtotal']['pr'] += $detailData['pr'];
+                        }
+                        
+                        // Akumulasi total per ruangan
+                        $ruanganData['ruangan_total']['pns'] += $jenisTenagaData['subtotal']['pns'];
+                        $ruanganData['ruangan_total']['pppk'] += $jenisTenagaData['subtotal']['pppk'];
+                        $ruanganData['ruangan_total']['part_time'] += $jenisTenagaData['subtotal']['part_time'];
+                        $ruanganData['ruangan_total']['kontrak_daerah'] += $jenisTenagaData['subtotal']['kontrak_daerah'];
+                        $ruanganData['ruangan_total']['kontrak_blud'] += $jenisTenagaData['subtotal']['kontrak_blud'];
+                        $ruanganData['ruangan_total']['thl'] += $jenisTenagaData['subtotal']['thl'];
+                        $ruanganData['ruangan_total']['lk'] += $jenisTenagaData['subtotal']['lk'];
+                        $ruanganData['ruangan_total']['pr'] += $jenisTenagaData['subtotal']['pr'];
+                        
+                        $ruanganData['jenis_tenaga_groups'][] = $jenisTenagaData;
+                    }
+                }
+                
+                // Hanya tambahkan ruangan jika ada data
+                if ($hasDataInRuangan) {
+                    // Akumulasi grand total
+                    $grandTotalPNS += $ruanganData['ruangan_total']['pns'];
+                    $grandTotalPPPK += $ruanganData['ruangan_total']['pppk'];
+                    $grandTotalPartTime += $ruanganData['ruangan_total']['part_time'];
+                    $grandTotalKontrakDaerah += $ruanganData['ruangan_total']['kontrak_daerah'];
+                    $grandTotalKontrakBlud += $ruanganData['ruangan_total']['kontrak_blud'];
+                    $grandTotalTHL += $ruanganData['ruangan_total']['thl'];
+                    $grandTotalLK += $ruanganData['ruangan_total']['lk'];
+                    $grandTotalPR += $ruanganData['ruangan_total']['pr'];
+                    
+                    $result[] = $ruanganData;
+                }
+            }
+            
+            return response()->json([
+                'data' => $result,
+                'grand_total' => [
+                    'pns' => $grandTotalPNS,
+                    'pppk' => $grandTotalPPPK,
+                    'part_time' => $grandTotalPartTime,
+                    'kontrak_daerah' => $grandTotalKontrakDaerah,
+                    'kontrak_blud' => $grandTotalKontrakBlud,
+                    'thl' => $grandTotalTHL,
+                    'lk' => $grandTotalLK,
+                    'pr' => $grandTotalPR
+                ]
+            ]);
+        }
+        
+        // Ambil data ruangan untuk dropdown
+        $ruanganList = DB::connection('sqlsrv')
+            ->table('hrd_ruangan')
+            ->where('status_aktif', 1)
+            ->orderBy('ruangan')
+            ->get();
+        
+        return view('laporan.per-jenis-tenaga-ruangan.index', compact('ruanganList'));
+    }
+    
+    public function print(Request $request)
+    {
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $kdRuangan = $request->kd_ruangan;
+        
+        // Validasi input
+        if (empty($bulan) || empty($tahun)) {
+            return redirect()->back()->with('error', 'Bulan dan tahun harus dipilih!');
+        }
+        
+        // Tentukan apakah menggunakan data current atau backup
+        $isCurrentPeriod = ($bulan == date('m') && $tahun == date('Y'));
+        $tableName = $isCurrentPeriod ? 'view_karyawan_perjenistenaga_peruangan' : 'view_karyawan_perjenistenaga_peruangan_backup';
+        
+        $result = [];
+        $grandTotalPNS = $grandTotalPPPK = $grandTotalPartTime = $grandTotalKontrakDaerah = $grandTotalKontrakBlud = $grandTotalTHL = 0;
+        $grandTotalLK = $grandTotalPR = 0;
+        
+        // Query ruangan berdasarkan filter
+        $ruanganQuery = DB::connection('sqlsrv')
+            ->table('hrd_ruangan')
+            ->where('status_aktif', 1)
+            ->orderBy('ruangan');
+            
+        if ($kdRuangan !== '*') {
+            $ruanganQuery->where('kd_ruangan', $kdRuangan);
+        }
+        
+        $ruanganList = $ruanganQuery->get();
+        
+        foreach ($ruanganList as $ruangan) {
+            // Query jenis tenaga per ruangan
+            $jenisTenagaList = DB::connection('sqlsrv')
+                ->table('hrd_jenis_tenaga')
+                ->orderBy('kd_jenis_tenaga')
+                ->get();
+            
+            $ruanganData = [
+                'ruangan' => $ruangan->ruangan,
+                'kd_ruangan' => $ruangan->kd_ruangan,
+                'jenis_tenaga_groups' => [],
+                'ruangan_total' => [
+                    'pns' => 0,
+                    'pppk' => 0,
+                    'part_time' => 0,
+                    'kontrak_daerah' => 0,
+                    'kontrak_blud' => 0,
+                    'thl' => 0,
+                    'lk' => 0,
+                    'pr' => 0
+                ]
+            ];
+            
+            $hasDataInRuangan = false;
+            
+            foreach ($jenisTenagaList as $jenisTenaga) {
+                // Query data per jenis tenaga di ruangan ini
+                $query = DB::connection('sqlsrv')->table($tableName)
+                    ->where('kd_jenis_tenaga', $jenisTenaga->kd_jenis_tenaga)
+                    ->where('kd_ruangan', $ruangan->kd_ruangan);
+                
+                // Jika menggunakan data backup, tambahkan filter bulan dan tahun
+                if (!$isCurrentPeriod) {
+                    $query->where('bulan_backup', $bulan)
+                          ->where('tahun_backup', $tahun);
+                }
+                
+                $dataDetail = $query->orderBy('ruangan', 'asc')
+                                  ->orderBy('sub_detail', 'asc')
+                                  ->get();
+                
+                if ($dataDetail->count() > 0) {
+                    $hasDataInRuangan = true;
+                    
+                    $jenisTenagaData = [
+                        'jenis_tenaga' => $jenisTenaga->jenis_tenaga,
+                        'kd_jenis_tenaga' => $jenisTenaga->kd_jenis_tenaga,
+                        'details' => [],
+                        'subtotal' => [
+                            'pns' => 0,
+                            'pppk' => 0,
+                            'part_time' => 0,
+                            'kontrak_daerah' => 0,
+                            'kontrak_blud' => 0,
+                            'thl' => 0,
+                            'lk' => 0,
+                            'pr' => 0
+                        ]
+                    ];
+                    
+                    foreach ($dataDetail as $item) {
+                        $detailData = [
+                            'sub_detail' => $item->sub_detail,
+                            'pns' => (int)$item->pns,
+                            'pppk' => (int)$item->pppk,
+                            'part_time' => (int)$item->part_time,
+                            'kontrak_daerah' => (int)$item->kontrak_daerah,
+                            'kontrak_blud' => (int)$item->kontrak_blud,
+                            'thl' => (int)($item->thl ?? 0),
+                            'lk' => (int)$item->lk,
+                            'pr' => (int)$item->pr
+                        ];
+                        
+                        $jenisTenagaData['details'][] = $detailData;
+                        
+                        // Akumulasi subtotal per jenis tenaga
+                        $jenisTenagaData['subtotal']['pns'] += $detailData['pns'];
+                        $jenisTenagaData['subtotal']['pppk'] += $detailData['pppk'];
+                        $jenisTenagaData['subtotal']['part_time'] += $detailData['part_time'];
+                        $jenisTenagaData['subtotal']['kontrak_daerah'] += $detailData['kontrak_daerah'];
+                        $jenisTenagaData['subtotal']['kontrak_blud'] += $detailData['kontrak_blud'];
+                        $jenisTenagaData['subtotal']['thl'] += $detailData['thl'];
+                        $jenisTenagaData['subtotal']['lk'] += $detailData['lk'];
+                        $jenisTenagaData['subtotal']['pr'] += $detailData['pr'];
+                    }
+                    
+                    // Akumulasi total per ruangan
+                    $ruanganData['ruangan_total']['pns'] += $jenisTenagaData['subtotal']['pns'];
+                    $ruanganData['ruangan_total']['pppk'] += $jenisTenagaData['subtotal']['pppk'];
+                    $ruanganData['ruangan_total']['part_time'] += $jenisTenagaData['subtotal']['part_time'];
+                    $ruanganData['ruangan_total']['kontrak_daerah'] += $jenisTenagaData['subtotal']['kontrak_daerah'];
+                    $ruanganData['ruangan_total']['kontrak_blud'] += $jenisTenagaData['subtotal']['kontrak_blud'];
+                    $ruanganData['ruangan_total']['thl'] += $jenisTenagaData['subtotal']['thl'];
+                    $ruanganData['ruangan_total']['lk'] += $jenisTenagaData['subtotal']['lk'];
+                    $ruanganData['ruangan_total']['pr'] += $jenisTenagaData['subtotal']['pr'];
+                    
+                    $ruanganData['jenis_tenaga_groups'][] = $jenisTenagaData;
+                }
+            }
+            
+            // Hanya tambahkan ruangan jika ada data
+            if ($hasDataInRuangan) {
+                // Akumulasi grand total
+                $grandTotalPNS += $ruanganData['ruangan_total']['pns'];
+                $grandTotalPPPK += $ruanganData['ruangan_total']['pppk'];
+                $grandTotalPartTime += $ruanganData['ruangan_total']['part_time'];
+                $grandTotalKontrakDaerah += $ruanganData['ruangan_total']['kontrak_daerah'];
+                $grandTotalKontrakBlud += $ruanganData['ruangan_total']['kontrak_blud'];
+                $grandTotalTHL += $ruanganData['ruangan_total']['thl'];
+                $grandTotalLK += $ruanganData['ruangan_total']['lk'];
+                $grandTotalPR += $ruanganData['ruangan_total']['pr'];
+                
+                $result[] = $ruanganData;
+            }
+        }
+        
+        // Format nama periode untuk header
+        $dataBulan = [
+            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
+            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
+            '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+        ];
+        
+        $periodeName = $dataBulan[$bulan] . ' ' . $tahun;
+        
+        $grandTotal = [
+            'pns' => $grandTotalPNS,
+            'pppk' => $grandTotalPPPK,
+            'part_time' => $grandTotalPartTime,
+            'kontrak_daerah' => $grandTotalKontrakDaerah,
+            'kontrak_blud' => $grandTotalKontrakBlud,
+            'thl' => $grandTotalTHL,
+            'lk' => $grandTotalLK,
+            'pr' => $grandTotalPR
+        ];
+        
+        return view('laporan.per-jenis-tenaga-ruangan.print', compact('result', 'grandTotal', 'periodeName', 'bulan', 'tahun', 'kdRuangan'));
+    }
+}
