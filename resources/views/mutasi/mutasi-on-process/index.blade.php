@@ -718,6 +718,46 @@
 
         $(document).on('click', '[data-kt-menu-modal-action-finalisasi="submit"]', function (e) {
             e.preventDefault();
+            
+            // Validasi form
+            var tanggal = $('#tanggal').val();
+            var passphrase = $('#passphrase').val();
+            var isValid = true;
+
+            // Reset error messages
+            $('.tanggal_error').text('');
+            $('.passphrase_error').text('');
+            $('#tanggal').removeClass('is-invalid');
+            $('#passphrase').removeClass('is-invalid');
+
+            // Validasi tanggal
+            if (!tanggal || tanggal.trim() === '') {
+                $('.tanggal_error').text('Tanggal tanda tangan harus diisi');
+                $('#tanggal').addClass('is-invalid');
+                isValid = false;
+            }
+
+            // Validasi passphrase
+            if (!passphrase || passphrase.trim() === '') {
+                $('.passphrase_error').text('Passphrase harus diisi');
+                $('#passphrase').addClass('is-invalid');
+                isValid = false;
+            }
+
+            // Jika validasi gagal, tampilkan alert dan hentikan proses
+            if (!isValid) {
+                Swal.fire({
+                    title: 'Form Tidak Valid!',
+                    text: 'Mohon lengkapi semua field yang diperlukan',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
+
             var kd_mutasi = $('#kd_mutasi').val();
             var kd_karyawan = $('#kd_karyawan').val();
             var jenis_mutasi = $('#jenis_mutasi').val();

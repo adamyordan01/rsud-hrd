@@ -125,4 +125,24 @@ class JurusanController extends Controller
             'code' => 200,
         ], 200);
     }
+
+    public function destroy($id)
+    {
+        try {
+            $jurusan = Jurusan::findOrFail($id);
+            $jurusan->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data jurusan berhasil dihapus.',
+                'code' => 200,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data. Data mungkin masih digunakan.',
+                'code' => 500,
+            ], 500);
+        }
+    }
 }

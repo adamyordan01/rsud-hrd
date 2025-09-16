@@ -251,7 +251,7 @@
                                                         @foreach ($jenisPegawai as $item)
                                                             <option
                                                                 value="{{ $item->kd_jenis_peg }}"
-                                                                {{ $item->kd_jenis_peg == $karyawan->kd_jenis_tenaga ? 'selected' : '' }}
+                                                                {{ $item->kd_jenis_peg == $karyawan->kd_jenis_peg ? 'selected' : '' }}
                                                             >
                                                                 {{ $item->jenis_peg }}
                                                             </option>

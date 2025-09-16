@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:\\laragon\\www\\hrd/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

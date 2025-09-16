@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\DataTables\PermissionDataTable;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\PermissionHelper;
 
 class PermissionController extends Controller
 {
@@ -37,12 +38,14 @@ class PermissionController extends Controller
             ], 422);
         }
 
-        $slug = str_replace('-', '.', Str::slug($request->name));
+        // Auto-add HRD prefix if not present
+        $permissionName = PermissionHelper::addPrefix($request->name);
+        $slug = str_replace('-', '.', Str::slug($permissionName));
 
         $permission = Permission::create([
-            'name' => $request->name,
+            'name' => $permissionName,
             'slug' => $slug,
-            'description' => $request->description,
+            'description' => $request->description ? 'HRD - ' . $request->description : 'HRD - ' . str_replace('_', ' ', ucfirst($request->name)),
             'guard_name' => 'web',
         ]);
 
@@ -60,6 +63,16 @@ class PermissionController extends Controller
     public function edit($id)
     {
         $permission = Permission::findOrFail($id);
+        
+        // Security check - hanya allow edit HRD permissions
+        if (!str_starts_with($permission->name, 'hrd_')) {
+            return response()->json([
+                'code' => 403,
+                'status' => 'error',
+                'message' => 'Access denied. Cannot edit non-HRD permissions.',
+            ], 403);
+        }
+        
         return response()->json([
             'code' => 200,
             'status' => 'success',
@@ -70,6 +83,15 @@ class PermissionController extends Controller
     public function update(Request $request, $id)
     {
         $permission = Permission::findOrFail($id);
+
+        // Security check - hanya allow update HRD permissions
+        if (!str_starts_with($permission->name, 'hrd_')) {
+            return response()->json([
+                'code' => 403,
+                'status' => 'error',
+                'message' => 'Access denied. Cannot modify non-HRD permissions.',
+            ], 403);
+        }
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:permissions,name,' . $permission->id,
@@ -91,12 +113,14 @@ class PermissionController extends Controller
             ], 422);
         }
 
-        $slug = str_replace('-', '.', Str::slug($request->name)); // Ubah tanda hubung menjadi tanda titik
+        // Ensure HRD prefix
+        $permissionName = PermissionHelper::addPrefix($request->name);
+        $slug = str_replace('-', '.', Str::slug($permissionName));
 
         $permission->update([
-            'name' => $request->name,
+            'name' => $permissionName,
             'slug' => $slug,
-            'description' => $request->description,
+            'description' => $request->description ? 'HRD - ' . $request->description : $permission->description,
         ]);
 
         // clear cache
@@ -113,6 +137,16 @@ class PermissionController extends Controller
     public function destroy($id)
     {
         $permission = Permission::findOrFail($id);
+        
+        // Security check - hanya allow delete HRD permissions
+        if (!str_starts_with($permission->name, 'hrd_')) {
+            return response()->json([
+                'code' => 403,
+                'status' => 'error',
+                'message' => 'Access denied. Cannot delete non-HRD permissions.',
+            ], 403);
+        }
+        
         $permission->delete();
 
         return response()->json([

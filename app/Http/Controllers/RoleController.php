@@ -7,18 +7,22 @@ use App\Models\Permission;
 use Illuminate\Http\Request;
 use App\DataTables\RoleDataTable;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\PermissionHelper;
 
 class RoleController extends Controller
 {
     public function index(RoleDataTable $dataTable)
     {
-        $permissions = Permission::all();
+        // Hanya tampilkan HRD permissions untuk role management
+        $permissions = Permission::where('name', 'like', 'hrd_%')
+            ->orderBy('name')
+            ->get();
+        
         return $dataTable->render('roles.index', compact('permissions'));
     }
 
     public function store(Request $request)
     {
-        // dd($request->all());
         $validator = Validator::make($request->all(), [
             'name' => 'required|unique:roles,name|string|max:255',
             'description' => 'nullable|string',
@@ -41,14 +45,24 @@ class RoleController extends Controller
             ], 422);
         }
 
+        // Auto-add HRD prefix if not present
+        $roleName = PermissionHelper::addRolePrefix($request->name);
+
         $role = Role::create([
-            'name' => $request->name,
+            'name' => $roleName,
             'description' => $request->description,
             'level' => $request->level,
             'guard_name' => 'web',
         ]);
 
-        $role->syncPermissions($request->permissions ?? []);
+        // Filter permissions to only HRD permissions
+        $hrdPermissions = collect($request->permissions ?? [])
+            ->filter(function ($permission) {
+                return str_starts_with($permission, 'hrd_');
+            })
+            ->toArray();
+
+        $role->syncPermissions($hrdPermissions);
 
         // clear cache
         cache()->forget('spatie.permission.cache');
@@ -65,7 +79,17 @@ class RoleController extends Controller
     public function show($id)
     {
         $role = Role::with('permissions')
-            ->withCount(['permissions', 'users'])->findOrFail($id);
+            ->withCount(['permissions', 'users'])
+            ->findOrFail($id);
+
+        // Filter hanya HRD roles jika diperlukan
+        if (!PermissionHelper::isHrdRole($role->name)) {
+            return response()->json([
+                'code' => 403,
+                'status' => 'error',
+                'message' => 'Access denied. This role is not part of HRD system.',
+            ], 403);
+        }
 
         return response()->json([
             'code' => 200,
@@ -91,6 +115,15 @@ class RoleController extends Controller
     {
         $role = Role::findOrfail($id);
 
+        // Security check - hanya allow update HRD roles
+        if (!PermissionHelper::isHrdRole($role->name)) {
+            return response()->json([
+                'code' => 403,
+                'status' => 'error',
+                'message' => 'Access denied. Cannot modify non-HRD roles.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
             'description' => 'nullable|string',
@@ -113,13 +146,23 @@ class RoleController extends Controller
             ], 422);
         }
 
+        // Ensure HRD prefix
+        $roleName = PermissionHelper::addRolePrefix($request->name);
+
         $role->update([
-            'name' => $request->name,
+            'name' => $roleName,
             'description' => $request->description,
             'level' => $request->level,
         ]);
 
-        $role->syncPermissions($request->permissions ?? []);
+        // Filter permissions to only HRD permissions
+        $hrdPermissions = collect($request->permissions ?? [])
+            ->filter(function ($permission) {
+                return str_starts_with($permission, 'hrd_');
+            })
+            ->toArray();
+
+        $role->syncPermissions($hrdPermissions);
 
         // clear cache
         cache()->forget('spatie.permission.cache');

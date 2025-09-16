@@ -1,6 +1,22 @@
 @php
     $filePathTte = $item->path_dokumen ?? '';
-    $urlFilePathtte = url(str_replace('public', 'public/storage', $filePathTte));
+    
+    // Generate URL untuk akses dokumen SK melalui route baru
+    if ($filePathTte) {
+        // Extract year and filename from path_dokumen
+        // Expected format: sk-documents/2025/SK_Pegawai_Kontrak_TTE_xxxxx.pdf
+        $pathParts = explode('/', $filePathTte);
+        if (count($pathParts) >= 3) {
+            $year = $pathParts[1]; // sk-documents/2025/filename.pdf
+            $filename = $pathParts[2];
+            $urlFilePathtte = route('sk.document.show', ['year' => $year, 'filename' => $filename]);
+        } else {
+            // Fallback untuk format lama
+            $urlFilePathtte = url(str_replace('public', 'storage', $filePathTte));
+        }
+    } else {
+        $urlFilePathtte = '';
+    }
 @endphp
 
 @if($item->verif_1 == 0)
@@ -51,21 +67,35 @@
     @endif
 @else
     @if($item->nomor_konsederan == "")
-        <a href="{{ $urlFilePathtte }}" 
-           class="btn btn-danger btn-sm d-block mb-2" 
-           title="SK" 
-           target="_blank">
-            <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
-            Cetak SK
-        </a>
+        @if($filePathTte)
+            <a href="{{ $urlFilePathtte }}" 
+               class="btn btn-danger btn-sm d-block mb-2" 
+               title="SK" 
+               target="_blank">
+                <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
+                Cetak SK
+            </a>
+        @else
+            <span class="btn btn-secondary btn-sm d-block mb-2" title="Dokumen SK belum tersedia">
+                <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
+                SK Tidak Tersedia
+            </span>
+        @endif
     @else
-        <a href="{{ $urlFilePathtte }}" 
-           class="btn btn-danger btn-sm d-block mb-2" 
-           title="SK" 
-           target="_blank">
-            <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
-            Cetak SK
-        </a>
+        @if($filePathTte)
+            <a href="{{ $urlFilePathtte }}" 
+               class="btn btn-danger btn-sm d-block mb-2" 
+               title="SK" 
+               target="_blank">
+                <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
+                Cetak SK
+            </a>
+        @else
+            <span class="btn btn-secondary btn-sm d-block mb-2" title="Dokumen SK belum tersedia">
+                <i class="ki-duotone ki-printer fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i> 
+                SK Tidak Tersedia
+            </span>
+        @endif
         <a href="module/sk/print_konsederan.php?data={{ $item->urut }}&thn={{ $item->tahun_sk }}" 
            class="btn btn-success btn-sm d-block mb-2" 
            title="Konsederan" 

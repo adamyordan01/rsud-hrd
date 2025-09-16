@@ -165,8 +165,8 @@ return [
         /*
          * Package Service Providers...
          */
-        Mccarlosen\LaravelMpdf\LaravelMpdfServiceProvider::class,
-        Intervention\Image\ImageServiceProvider::class,
+        // Mccarlosen\LaravelMpdf\LaravelMpdfServiceProvider::class,
+        // Intervention\Image\ImageServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -176,6 +176,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\BladeServiceProvider::class,
 
     ],
 

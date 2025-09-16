@@ -160,25 +160,34 @@
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="#">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.riwayat-organisasi.index')) active @endif" 
+                        href="{{ route('admin.karyawan.riwayat-organisasi.index', $karyawan->kd_karyawan) }}"
+                    >
                         Riwayat Organisasi 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="#">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.penghargaan.index')) active @endif" 
+                        href="{{ route('admin.karyawan.penghargaan.index', $karyawan->kd_karyawan) }}"
+                    >
                         Penghargaan 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 "
-                        href="#">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.seminar.index')) active @endif" 
+                        href="{{ route('admin.karyawan.seminar.index', $karyawan->kd_karyawan) }}"
+                    >
                         Seminar 
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 " href="#">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.tugas.index')) active @endif" 
+                        href="{{ route('admin.karyawan.tugas.index', $karyawan->kd_karyawan) }}"
+                    >
                         Tugas 
                     </a>
                 </li>
@@ -202,7 +211,10 @@
                 </li>
 
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-active-primary ms-0 me-10 py-5 " href="/metronic8/demo1/account/logs.html">
+                    <a 
+                        class="nav-link text-active-primary ms-0 me-10 py-5 @if (request()->routeIs('admin.karyawan.cuti.index')) active @endif" 
+                        href="{{ route('admin.karyawan.cuti.index', $karyawan->kd_karyawan) }}"
+                    >
                         Cuti 
                     </a>
                 </li>

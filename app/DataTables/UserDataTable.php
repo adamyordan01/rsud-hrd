@@ -30,12 +30,23 @@ class UserDataTable extends DataTable
                 return $nama_lengkap;
             })
             ->addColumn('roles', function (User $user) {
-                return $user->getRoleNames()->implode(', ') ?: '-';
+                // Hanya tampilkan HRD roles
+                $hrdRoles = collect($user->getRoleNames())
+                    ->filter(function ($role) {
+                        return str_starts_with($role, 'hrd_');
+                    })
+                    ->map(function ($role) {
+                        // Tampilkan tanpa prefix untuk readability
+                        $displayName = str_replace('hrd_', '', $role);
+                        return '<span class="badge badge-success">' . $displayName . '</span>';
+                    });
+                
+                return $hrdRoles->count() > 0 ? $hrdRoles->implode(' ') : '<span class="badge badge-secondary">Tidak ada role</span>';
             })
             ->addColumn('action', function (User $user) {
                 return view('user.datatables-column._actions', compact('user'));
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['roles', 'action'])
             ->filterColumn('name', function ($query, $keyword) {
                 $query->whereHas('karyawan', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
@@ -51,9 +62,16 @@ class UserDataTable extends DataTable
      */
     public function query(User $model)
     {
-        return $model->newQuery()->with('karyawan')
+        return $model->newQuery()
+            ->with(['karyawan', 'roles'])
             ->whereHas('karyawan', function ($query) {
                 $query->where('status_peg', 1);
+            })
+            // Hanya tampilkan user yang memiliki HRD roles atau tidak memiliki role sama sekali
+            ->where(function ($query) {
+                $query->whereHas('roles', function ($q) {
+                    $q->where('name', 'like', 'hrd_%');
+                })->orWhereDoesntHave('roles');
             });
     }
 
@@ -76,9 +94,25 @@ class UserDataTable extends DataTable
                 'dom' => 'Bfrtip',
                 'buttons' => ['reload'],
                 'language' => [
-                    'search' => '', // Menghapus label "Search" default
-                    'searchPlaceholder' => 'Cari Karyawan...', // Placeholder untuk input pencarian
+                    'search' => '',
+                    'searchPlaceholder' => 'Cari User/Karyawan...',
+                    'lengthMenu' => 'Tampilkan _MENU_ data per halaman',
+                    'zeroRecords' => 'Tidak ada data yang ditemukan',
+                    'info' => 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
+                    'infoEmpty' => 'Menampilkan 0 sampai 0 dari 0 data',
+                    'infoFiltered' => '(difilter dari _MAX_ total data)',
+                    'paginate' => [
+                        'first' => 'Pertama',
+                        'last' => 'Terakhir',
+                        'next' => 'Selanjutnya',
+                        'previous' => 'Sebelumnya'
+                    ]
                 ],
+                'pageLength' => 10,
+                'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
+                'searching' => true,
+                'processing' => true,
+                'serverSide' => true,
             ]);
     }
 
@@ -90,10 +124,10 @@ class UserDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            Column::make('id')->title('No.')->orderable(false),
-            Column::make('kd_karyawan')->title('ID Pegawai')->orderable(false),
-            Column::make('name')->title('Nama'),
-            Column::make('email')->title('Email'),
+            Column::make('id')->title('No.')->orderable(false)->searchable(false),
+            Column::make('kd_karyawan')->title('ID Pegawai')->orderable(false)->searchable(true),
+            Column::make('name')->title('Nama')->searchable(true),
+            Column::make('email')->title('Email')->searchable(true),
             Column::make('roles')->title('Roles')->orderable(false)->searchable(false),
             Column::make('action')->title('Action')->orderable(false)->searchable(false),
         ];

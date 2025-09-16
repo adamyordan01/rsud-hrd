@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
 use Intervention\Image\ImageManagerStatic as Image;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
+use Mpdf\Mpdf;
 
 class MutasiOnProcessController extends Controller
 {
@@ -89,21 +90,30 @@ class MutasiOnProcessController extends Controller
         $ruangan = Auth::user()->karyawan->kd_ruangan;
         $searchValue = $request->search['value'];
 
-        // Query dasar
-        $query = DB::table('view_proses_mutasi')
-            ->where('kd_tahap_mutasi', 1)
-            ->whereIn('kd_jenis_mutasi', [1, 3]);
+        // Query dengan join untuk mendapatkan semua data yang diperlukan termasuk id_dokumen dan path_dokumen
+        $query = DB::table('view_proses_mutasi as vpm')
+            ->leftJoin('hrd_r_mutasi as hrm', function($join) {
+                $join->on('vpm.kd_mutasi', '=', 'hrm.kd_mutasi')
+                     ->on('vpm.kd_karyawan', '=', 'hrm.kd_karyawan');
+            })
+            ->select(
+                'vpm.*',
+                'hrm.id_dokumen',
+                'hrm.path_dokumen',
+                'hrm.kd_tahap_mutasi as current_tahap_mutasi'
+            )
+            ->whereIn('vpm.kd_jenis_mutasi', [1, 3]);
 
         if (!empty($searchValue)) {
             $query->where(function($q) use ($searchValue) {
-                $q->where('kd_mutasi', 'like', "%{$searchValue}%")
-                    ->orWhere('kd_karyawan', 'like', "%{$searchValue}%")
-                    ->orWhere('nama', 'like', "%{$searchValue}%")
-                    ->orWhere('jab_struk_lama', 'like', "%{$searchValue}%")
-                    ->orWhere('jab_struk_baru', 'like', "%{$searchValue}%")
-                    ->orWhere('ruangan_lama', 'like', "%{$searchValue}%")
-                    ->orWhere('ruangan_baru', 'like', "%{$searchValue}%")
-                    ->orWhere('tempat_lahir', 'like', "%{$searchValue}%");
+                $q->where('vpm.kd_mutasi', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.kd_karyawan', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.nama', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.jab_struk_lama', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.jab_struk_baru', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.ruangan_lama', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.ruangan_baru', 'like', "%{$searchValue}%")
+                    ->orWhere('vpm.tempat_lahir', 'like', "%{$searchValue}%");
             });
         }
 
@@ -111,12 +121,15 @@ class MutasiOnProcessController extends Controller
         return DataTables::of($query)
             // Modifikasi data untuk setiap baris
             ->editColumn('jenis_mutasi', function($item) {
-                // Format jenis mutasi
-                return match($item->kd_jenis_mutasi) {
-                    1 => 'Mutasi (Nota)',
-                    3 => 'Tugas Tambahan',
-                    default => 'Tidak Diketahui'
-                };
+                // Format jenis mutasi - menggunakan switch karena PHP 7.4 tidak support match
+                switch($item->kd_jenis_mutasi) {
+                    case 1:
+                        return 'Mutasi (Nota)';
+                    case 3:
+                        return 'Tugas Tambahan';
+                    default:
+                        return 'Tidak Diketahui';
+                }
             })
             ->editColumn('nama', function($item) {
                 // Format nama dengan gelar
@@ -239,7 +252,7 @@ class MutasiOnProcessController extends Controller
                 }
     
                 // Tambahan tombol edit mutasi nota
-                if (($ruangan == 91 || $ruangan == 57) && $item->kd_tahap_mutasi == 1) {
+                if (($ruangan == 91 || $ruangan == 57) && $item->current_tahap_mutasi == 1) {
                     $aksi .= '<a href="' . route('admin.mutasi.edit-mutasi-nota-on-process', [
                         'id' => $item->kd_mutasi, 
                         'jenis_mutasi' => $item->kd_jenis_mutasi
@@ -257,8 +270,19 @@ class MutasiOnProcessController extends Controller
                 ]) . '" target="_blank" class="btn btn-primary btn-sm d-block mb-2">
                     <i class="ki-duotone ki-document fs-2"><span class="path1"></span><span class="path2"></span></i>
                     Cetak Draft Nota
-                </a>
-                <a href="javascript:void(0)" 
+                </a>';
+
+                // Tombol download dokumen final jika sudah selesai TTE
+                if ($item->current_tahap_mutasi == 2 && !empty($item->id_dokumen) && !empty($item->path_dokumen)) {
+                    $aksi .= '<a href="' . route('admin.mutasi-on-process.download-document', $item->id_dokumen) . '" 
+                        class="btn btn-success btn-sm d-block mb-2" 
+                        title="Download Dokumen Final">
+                        <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
+                        Download Dokumen Final
+                    </a>';
+                }
+
+                $aksi .= '<a href="javascript:void(0)" 
                     class="btn btn-secondary btn-sm d-block mb-2" 
                     data-bs-toggle="modal" 
                     data-bs-target="#kt_modal_log" 
@@ -501,10 +525,25 @@ class MutasiOnProcessController extends Controller
 
     public function finalisasi(Request $request)
     {
+        // Validasi server-side
+        $request->validate([
+            'tanggal' => 'required|date',
+            'passphrase' => 'required|string|min:1',
+            'kd_mutasi' => 'required',
+            'kd_karyawan' => 'required',
+            'jenis_mutasi' => 'required'
+        ], [
+            'tanggal.required' => 'Tanggal tanda tangan harus diisi',
+            'tanggal.date' => 'Format tanggal tidak valid',
+            'passphrase.required' => 'Passphrase harus diisi',
+            'passphrase.min' => 'Passphrase tidak boleh kosong'
+        ]);
+
         $jenisMutasi = $request->jenis_mutasi;
         $kd_mutasi = $request->kd_mutasi;
         $kd_karyawan = $request->kd_karyawan;
         $passphrase = $request->passphrase;
+        $tanggal = $request->tanggal;
 
         DB::beginTransaction();
 
@@ -521,6 +560,7 @@ class MutasiOnProcessController extends Controller
                     'stt_stempel' => 1,
                     'user_update' => auth()->user()->kd_karyawan,
                     'tgl_update' => Carbon::now(),
+                    'tgl_ttd' => Carbon::parse($tanggal),
                     'no_nota' => $no_nota
                 ]);
 
@@ -725,16 +765,13 @@ class MutasiOnProcessController extends Controller
             // dd($getVerifikasi);
 
         $year = date('Y');
-        // $pdfFilePath = $totalRow > 1
-        //     ? 'public/sk/SK Pegawai Kontrak-' . $tahun . '.pdf'
-        //     : 'public/sk/SK Pegawai Kontrak-' . $tahun . '-' . $kd_karyawan . '.pdf'
-        // ;
-        // buat folder di storage/app/public/mutasi-nota/2024/kd_mutasi-kd_karyawan.pdf
-        $pdfFilePath = 'public/mutasi-nota/' . $year . '/' . $kd_mutasi . '-' . $kd_karyawan . '.pdf';
+        // Gunakan hrd_files disk untuk penyimpanan yang aman
+        $pdfFilePath = 'mutasi-documents/' . $year . '/Nota_Tugas_Mutasi_' . $year . '_' . $kd_mutasi . '_' . $kd_karyawan . '.pdf';
 
-        // jika folder belum ada maka buat folder tersebut
-        if (!Storage::exists('public/mutasi-nota/' . $year)) {
-            Storage::makeDirectory('public/mutasi-nota/' . $year);
+        // Pastikan direktori ada di hrd_files disk
+        $directory = 'mutasi-documents/' . $year;
+        if (!Storage::disk('hrd_files')->exists($directory)) {
+            Storage::disk('hrd_files')->makeDirectory($directory);
         }
         
         $PNG_WEB_DIR = storage_path('app/public/qr-code-mutasi-nota/' . $year . '/');
@@ -757,7 +794,11 @@ class MutasiOnProcessController extends Controller
             'kd_jenis_mutasi' => $kd_jenis_mutasi
         ];
 
-        $pdf = \PDF::loadView('mutasi.mutasi-on-process.nota-tugas-final', $data, [], [
+        // Generate HTML dari blade template
+        $html = view('mutasi.mutasi-on-process.nota-tugas-final', $data)->render();
+
+        // Konfigurasi Mpdf
+        $mpdf = new Mpdf([
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
             'margin_top' => 10,
@@ -766,21 +807,28 @@ class MutasiOnProcessController extends Controller
             'margin_left' => 15,
             'margin_header' => 25,
             'margin_footer' => 5,
-            // font size 11pt
             'default_font_size' => 11,
-            'default_font' => 'bookman-old-style',
-            'custom_font_dir' => base_path('public/assets/fonts/'),
-            'custom_font_data' => [
+            'fontDir' => [base_path('public/assets/fonts/')],
+            'fontdata' => [
                 'bookman-old-style' => [
                     'R' => 'Bookman Old Style Regular.ttf',
                     'B' => 'Bookman Old Style Bold.ttf',
                     'I' => 'Bookman Old Style Italic.ttf',
                     'BI' => 'Bookman Old Style Bold Italic.ttf'
                 ]
-            ]
+            ],
+            'default_font' => 'bookman-old-style'
         ]);
 
-        Storage::put($pdfFilePath, $pdf->output());
+        // Set watermark DRAFT untuk testing sebelum masuk production
+        // $mpdf->SetWatermarkText('DRAFT', 0.1);
+        // $mpdf->showWatermarkText = true;
+
+        $mpdf->WriteHTML($html);
+        $pdfOutput = $mpdf->Output('', 'S');
+
+        // Simpan PDF ke hrd_files disk yang aman
+        Storage::disk('hrd_files')->put($pdfFilePath, $pdfOutput);
 
         try {
             $response = $this->sendPdfForSignatures($pdfFilePath, $passphrase, $kd_mutasi, $kd_karyawan);
@@ -854,7 +902,8 @@ class MutasiOnProcessController extends Controller
 
         $this->generateQrCode($link, $PNG_WEB_DIR . $imgName, $logo);
 
-        $pdf = \PDF::loadView('mutasi.mutasi-on-process.nota-tugas-final', [
+        // Data untuk template
+        $data = [
             'getVerifikasi' => $getVerifikasi,
             'getDataLama' => $getDataLama,
             'getDirektur' => $getDirektur,
@@ -862,7 +911,13 @@ class MutasiOnProcessController extends Controller
             'logoLangsa' => $logoLangsa,
             'logoEsign' => $logoEsign,
             'kd_jenis_mutasi' => $kd_jenis_mutasi
-        ], [], [
+        ];
+
+        // Generate HTML dari blade template
+        $html = view('mutasi.mutasi-on-process.nota-tugas-final', $data)->render();
+
+        // Konfigurasi Mpdf dengan watermark DRAFT
+        $mpdf = new Mpdf([
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
             'margin_top' => 10,
@@ -871,27 +926,29 @@ class MutasiOnProcessController extends Controller
             'margin_left' => 15,
             'margin_header' => 5,
             'margin_footer' => 5,
-            'show_watermark' => true,
-            'watermark' => 'DRAFT',
-            'watermark_font' => 'Arial',
-            'watermark_alpha' => 0.1,
-            // font size 11pt
             'default_font_size' => 11,
-            'default_font' => 'bookman-old-style',
-            'custom_font_dir' => base_path('public/assets/fonts/'),
-            'custom_font_data' => [
+            'fontDir' => [base_path('public/assets/fonts/')],
+            'fontdata' => [
                 'bookman-old-style' => [
                     'R' => 'Bookman Old Style Regular.ttf',
                     'B' => 'Bookman Old Style Bold.ttf',
                     'I' => 'Bookman Old Style Italic.ttf',
                     'BI' => 'Bookman Old Style Bold Italic.ttf'
                 ]
-            ]
+            ],
+            'default_font' => 'bookman-old-style'
         ]);
 
-        // return $pdf->stream();
-        // return pdf with name Draft Nota Tugas Mutasi - kd_mutasi-kd_karyawan.pdf
-        return $pdf->download('Draft Nota Tugas Mutasi - ' . $kd_mutasi . '-' . $kd_karyawan . '.pdf');
+        // Set watermark untuk draft
+        $mpdf->SetWatermarkText('DRAFT', 0.1);
+        $mpdf->showWatermarkText = true;
+
+        $mpdf->WriteHTML($html);
+
+        // Download langsung tanpa simpan ke storage (untuk draft)
+        return response($mpdf->Output('', 'S'), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="Draft Nota Tugas Mutasi - ' . $kd_mutasi . '-' . $kd_karyawan . '.pdf"');
     }
 
     private function getNotaNumber($kd_karyawan)
@@ -1013,7 +1070,7 @@ class MutasiOnProcessController extends Controller
                 'multipart' => [
                     [
                         'name' => 'file',
-                        'contents' => fopen(storage_path('app/' . $pdfFilePath), 'r'),
+                        'contents' => Storage::disk('hrd_files')->get($pdfFilePath),
                         'filename' => basename($pdfFilePath)
                     ],
                     [
@@ -1077,25 +1134,28 @@ class MutasiOnProcessController extends Controller
     {
         $endpoint = "http://123.108.100.83:85/api/sign/download/" . $id_dokumen;
 
-        $filename = 'Nota Tugas Mutasi-' . $id_dokumen . '.pdf';
+        $filename = 'Nota_Tugas_Mutasi_' . $id_dokumen . '.pdf';
         $year = date('Y');
-        $directory = 'public/mutasi-nota-tte/' . $year;
+        $directory = 'mutasi-documents/' . $year . '/signed';
         $filePath = $directory . '/' . $filename;
 
-        if (!Storage::exists($directory)) {
-            Storage::makeDirectory($directory);
+        // Pastikan direktori signed ada di hrd_files disk
+        if (!Storage::disk('hrd_files')->exists($directory)) {
+            Storage::disk('hrd_files')->makeDirectory($directory);
         }
 
-        // store the file to storage
+        // Download file dari server TTE
         $client = new Client();
         $response = $client->request('GET', $endpoint, [
             'headers' => [
                 'Authorization' => 'Basic ZXNpZ246cXdlcnR5'
-            ],
-            'sink' => storage_path('app/' . $filePath)
+            ]
         ]);
 
-        // save to database
+        // Simpan file yang sudah ditandatangani ke hrd_files disk
+        Storage::disk('hrd_files')->put($filePath, $response->getBody()->getContents());
+
+        // Update database dengan path baru
         DB::table('hrd_r_mutasi')
             ->where('id_dokumen', $id_dokumen)
             ->update([
@@ -1279,5 +1339,86 @@ class MutasiOnProcessController extends Controller
         sort($unique);
 
         print_r($unique);
+    }
+
+    /**
+     * Download dokumen mutasi nota yang sudah ditandatangani
+     */
+    public function downloadMutasiDocument($id_dokumen)
+    {
+        try {
+            // Cari record berdasarkan id_dokumen
+            $mutasi = DB::table('hrd_r_mutasi')
+                ->where('id_dokumen', $id_dokumen)
+                ->whereNotNull('path_dokumen')
+                ->first();
+
+            if (!$mutasi) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Dokumen tidak ditemukan'
+                ], 404);
+            }
+
+            // Periksa apakah file ada di hrd_files disk
+            if (!Storage::disk('hrd_files')->exists($mutasi->path_dokumen)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'File dokumen tidak ditemukan'
+                ], 404);
+            }
+
+            // Return file untuk download
+            $fileContent = Storage::disk('hrd_files')->get($mutasi->path_dokumen);
+            $fileName = 'Nota_Tugas_Mutasi_' . $id_dokumen . '.pdf';
+            
+            return response($fileContent, 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Cleanup file temporary mutasi nota setelah TTE selesai
+     */
+    public function cleanupMutasiTemporaryFiles()
+    {
+        try {
+            $cleanedCount = 0;
+            $year = date('Y');
+            
+            // Ambil data mutasi yang sudah selesai TTE (ada path_dokumen dan id_dokumen)
+            $completedMutasi = DB::table('hrd_r_mutasi')
+                ->whereNotNull('id_dokumen')
+                ->whereNotNull('path_dokumen')
+                ->get(['kd_mutasi', 'kd_karyawan']);
+
+            foreach ($completedMutasi as $mutasi) {
+                // File temporary yang akan dihapus
+                $tempFile = 'mutasi-documents/' . $year . '/Nota_Tugas_Mutasi_' . $year . '_' . $mutasi->kd_mutasi . '_' . $mutasi->kd_karyawan . '.pdf';
+                
+                if (Storage::disk('hrd_files')->exists($tempFile)) {
+                    Storage::disk('hrd_files')->delete($tempFile);
+                    $cleanedCount++;
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Berhasil membersihkan $cleanedCount file temporary mutasi nota"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat cleanup: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

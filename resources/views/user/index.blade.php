@@ -161,10 +161,10 @@
 
         $(document).ready(function() {
             // Initialize Datatables
-
             var table = $('#user-table').DataTable({
                 processing: true,
                 serverSide: true,
+                searching: true, // Enable searching
                 ajax: '{{ route('admin.user-management.users.index') }}',
                 columns: [
                     { 
@@ -176,30 +176,53 @@
                         searchable: false,
                         orderable: false
                     },
-                    { data: 'kd_karyawan', name: 'kd_karyawan', orderable: false },
-                    { data: 'name', name: 'name' },
-                    { data: 'email', name: 'email' },
+                    { data: 'kd_karyawan', name: 'kd_karyawan', orderable: false, searchable: true },
+                    { data: 'name', name: 'name', searchable: true },
+                    { data: 'email', name: 'email', searchable: true },
                     { data: 'roles', name: 'roles', orderable: false, searchable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
-                initComplete: function () {
-                    var api = this.api();
-
-                    // Event pencarian berdasarkan input custom
-                    $('[data-kt-user-table-filter="search"]').on('keyup', function() {
-                        table.search(this.value).draw();
-                    });
+                dom: 'rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>', // Hide default search box
+                language: {
+                    processing: "Memproses...",
+                    search: "Cari:",
+                    lengthMenu: "Tampilkan _MENU_ entri",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+                    infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
+                    infoFiltered: "(disaring dari _MAX_ entri keseluruhan)",
+                    paginate: {
+                        first: "Pertama",
+                        last: "Terakhir",
+                        next: "Selanjutnya",
+                        previous: "Sebelumnya"
+                    }
                 }
             });
 
-            // search
-            // $('#kt_customers_table_wrapper input[data-kt-user-table-filter="search"]').on('keyup', function () {
-            //     table.search(this.value).draw();
-            // });
+            // Custom search functionality with debounce and visual feedback
+            var searchTimeout;
+            var $searchInput = $('[data-kt-user-table-filter="search"]');
+            var $searchIcon = $searchInput.prev('i');
+            
+            $searchInput.on('keyup', function() {
+                var value = this.value;
+                
+                // Clear existing timeout
+                clearTimeout(searchTimeout);
+                
+                // Show loading state
+                $searchIcon.removeClass('ki-magnifier').addClass('spinner-border spinner-border-sm');
+                
+                // Set new timeout - wait 500ms after user stops typing
+                searchTimeout = setTimeout(function() {
+                    table.search(value).draw();
+                }, 500);
+            });
 
-            // Instance table
-            table.on('draw', function () {
-                KTMenu. createInstances();
+            // Reset icon when search is complete
+            table.on('draw', function() {
+                $searchIcon.removeClass('spinner-border spinner-border-sm').addClass('ki-magnifier');
+                KTMenu.createInstances();
             });
 
             // Assign Role

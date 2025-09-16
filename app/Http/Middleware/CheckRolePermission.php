@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\PermissionHelper;
 
 class CheckRolePermission
 {
@@ -12,11 +13,13 @@ class CheckRolePermission
     {
         $user = Auth::user();
 
-        if (! $user->hasRole($role)) {
+        // Check HRD role with prefix
+        if (! $user->hasHrdRole($role)) {
             abort(403);
         }
 
-        if ($permission && ! $user->hasPermission($permission)) {
+        // Check HRD permission with prefix if provided
+        if ($permission && ! $user->hasHrdPermission($permission)) {
             abort(403);
         }
 

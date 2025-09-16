@@ -245,6 +245,7 @@
             var table = $('#role-table').DataTable({
                 processing: true,
                 serverSide: true,
+                searching: true, // Enable searching
                 ajax: '{{ route('admin.user-management.roles.index') }}',
                 columns: [
                     { 
@@ -256,15 +257,53 @@
                         searchable: false,
                         orderable: false
                     },
-                    { data: 'name', name: 'name' },
+                    { data: 'name', name: 'name', searchable: true },
                     { data: 'permissions', name: 'permissions', orderable: false, searchable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
-                ]
+                ],
+                dom: 'rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>', // Hide default search box
+                language: {
+                    processing: "Memproses...",
+                    search: "Cari:",
+                    lengthMenu: "Tampilkan _MENU_ entri",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+                    infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
+                    infoFiltered: "(disaring dari _MAX_ entri keseluruhan)",
+                    paginate: {
+                        first: "Pertama",
+                        last: "Terakhir",
+                        next: "Selanjutnya",
+                        previous: "Sebelumnya"
+                    }
+                }
             });
 
-            // Instance table
-            table.on('draw', function () {
-                KTMenu. createInstances();
+            // Instance table - removed duplicate KTMenu.createInstances()
+
+            // Custom search functionality with debounce and visual feedback
+            var searchTimeout;
+            var $searchInput = $('input[data-kt-customer-table-filter="search"]');
+            var $searchIcon = $searchInput.prev('i');
+            
+            $searchInput.on('keyup', function() {
+                var value = this.value;
+                
+                // Clear existing timeout
+                clearTimeout(searchTimeout);
+                
+                // Show loading state
+                $searchIcon.removeClass('ki-magnifier').addClass('spinner-border spinner-border-sm');
+                
+                // Set new timeout - wait 500ms after user stops typing
+                searchTimeout = setTimeout(function() {
+                    table.search(value).draw();
+                }, 500);
+            });
+
+            // Reset icon when search is complete
+            table.on('draw', function() {
+                $searchIcon.removeClass('spinner-border spinner-border-sm').addClass('ki-magnifier');
+                KTMenu.createInstances();
             });
 
             // Add Role

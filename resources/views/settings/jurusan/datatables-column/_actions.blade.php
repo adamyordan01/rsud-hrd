@@ -19,14 +19,32 @@
                 href="javascript:void(0)"
                 class="menu-link px-3 edit"
                 data-id="{{ $row->kd_jurusan }}"
-                id="detail-user"
+                id="edit-jurusan"
             >
-                <i class="ki-duotone ki-eye fs-3 me-2">
+                <i class="ki-duotone ki-pencil fs-3 me-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                </i>
+                Edit
+            </a>
+        </div>
+
+        <div class="menu-item px-3">
+            <a 
+                href="javascript:void(0)"
+                class="menu-link px-3 delete"
+                data-id="{{ $row->kd_jurusan }}"
+                data-nama="{{ $row->jurusan }}"
+                id="delete-jurusan"
+            >
+                <i class="ki-duotone ki-trash fs-3 me-2">
                     <span class="path1"></span>
                     <span class="path2"></span>
                     <span class="path3"></span>
+                    <span class="path4"></span>
+                    <span class="path5"></span>
                 </i>
-                Edit
+                Delete
             </a>
         </div>
     </div>

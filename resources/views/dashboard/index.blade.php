@@ -494,7 +494,10 @@
                 </div>
 
                 <div class="col-sm-6 col-md-4 col-lg-3 col-xl-3">
-                    <div class="card h-lg-100">
+                    <a
+                        href="{{ route('admin.karyawan-luar.index') }}"
+                        class="card h-lg-100"
+                    >
                         <div class="card-body d-flex justify-content-between align-items-start flex-column">
                             <div class="d-flex justify-content-between w-100">
                                 <div class="d-flex flex-column my-2">
@@ -517,7 +520,7 @@
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 <div class="col-sm-6 col-md-4 col-lg-3 col-xl-3">

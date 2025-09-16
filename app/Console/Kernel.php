@@ -24,7 +24,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Cleanup SK temporary files setiap hari pada jam 2 pagi
+        $schedule->command('sk:cleanup-temporary --hours=24')
+                 ->dailyAt('02:00')
+                 ->withoutOverlapping()
+                 ->runInBackground();
+
+        // Cleanup Mutasi nota temporary files setiap hari pada jam 2:30 pagi
+        $schedule->command('mutasi:cleanup-temporary-files')
+                 ->dailyAt('02:30')
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     /**

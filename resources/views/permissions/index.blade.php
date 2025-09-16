@@ -213,9 +213,11 @@
         });
 
         $(document).ready(function () {
+            // Initialize Datatables
             var table = $('#permission-table').DataTable({
                 processing: true,
                 serverSide: true,
+                searching: true, // Enable searching
                 ajax: '{{ route('admin.user-management.permissions.index') }}',
                 columns: [
                     { 
@@ -227,17 +229,53 @@
                         searchable: false,
                         orderable: false
                     },
-                    { data: 'name', name: 'name' },
-                    { data: 'slug', name: 'slug' },
-                    { data: 'description', name: 'description' },
-                    { data: 'roles', name: 'roles', orderable: false, searchable: false },
+                    { data: 'name', name: 'name', searchable: true },
+                    { data: 'slug', name: 'slug', searchable: true },
+                    { data: 'description', name: 'description', searchable: true },
+                    { data: 'roles', name: 'roles', orderable: false, searchable: true },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
-                ]
+                ],
+                dom: 'rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>', // Hide default search box
+                language: {
+                    processing: "Memproses...",
+                    search: "Cari:",
+                    lengthMenu: "Tampilkan _MENU_ entri",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+                    infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
+                    infoFiltered: "(disaring dari _MAX_ entri keseluruhan)",
+                    paginate: {
+                        first: "Pertama",
+                        last: "Terakhir",
+                        next: "Selanjutnya",
+                        previous: "Sebelumnya"
+                    }
+                }
             });
 
-            // Instance table
-            table.on('draw', function () {
-                KTMenu. createInstances();
+            // Custom search functionality with debounce and visual feedback
+            var searchTimeout;
+            var $searchInput = $('input[data-kt-customer-table-filter="search"]');
+            var $searchIcon = $searchInput.prev('i');
+            
+            $searchInput.on('keyup', function() {
+                var value = this.value;
+                
+                // Clear existing timeout
+                clearTimeout(searchTimeout);
+                
+                // Show loading state
+                $searchIcon.removeClass('ki-magnifier').addClass('spinner-border spinner-border-sm');
+                
+                // Set new timeout - wait 500ms after user stops typing
+                searchTimeout = setTimeout(function() {
+                    table.search(value).draw();
+                }, 500);
+            });
+
+            // Reset icon when search is complete
+            table.on('draw', function() {
+                $searchIcon.removeClass('spinner-border spinner-border-sm').addClass('ki-magnifier');
+                KTMenu.createInstances();
             });
 
             // Add Permission

@@ -20,7 +20,7 @@
                 class="app-sidebar-menu-primary menu menu-column menu-rounded menu-sub-indention menu-state-bullet-primary px-3 mb-5">
 
                 
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['struktural', 'it_member', 'it_head', 'kepegawaian', 'superadmin']) || Auth::user()->roles->count() > 1))
+                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']) || Auth::user()->hasOnlyHrdRoles()))
                     <div class="menu-item">
                         <a
                             class="menu-link @if (request()->routeIs('admin.dashboard.*')) active @endif"
@@ -39,8 +39,8 @@
                     </div>
                 @endif
 
-                {{-- @if (Auth::check() && (Auth::user()->hasAnyRole(['pegawai_biasa']) || Auth::user()->roles->count() > 1)) --}}
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['pegawai_biasa'])))
+                {{-- @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_pegawai_biasa']) || Auth::user()->roles->count() > 1)) --}}
+                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_pegawai_biasa'])))
                     <!-- Dashboard menu untuk role pegawai_biasa -->
                     <div class="menu-item">
                         <a
@@ -246,8 +246,8 @@
                     <!--end:Menu sub-->
                 </div> --}}
 
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['struktural', 'it_member', 'it_head', 'kepegawaian', 'superadmin']) || Auth::user()->roles->count() > 1))
-                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.karyawan.*') ? 'here show' : '' }}">
+                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']) || Auth::user()->hasOnlyHrdRoles()))
+                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.karyawan.*', 'admin.karyawan-luar.*', 'admin.karyawan-belum-lengkap.*', 'admin.pegawai-tidak-aktif.*') ? 'here show' : '' }}">
                         <span class="menu-link">
                             <span class="menu-icon">
                                 {{-- <i class="ki-outline ki-gift fs-2"></i> --}}
@@ -264,7 +264,7 @@
                         <div class="menu-sub menu-sub-accordion">
                             <div class="menu-item">
                                 <a 
-                                    class="menu-link @if (request()->routeIs('admin.karyawan.*')) active @endif"
+                                    class="menu-link @if (request()->routeIs('admin.karyawan.*') && !request()->has('status')) active @endif"
                                     href="{{ route('admin.karyawan.index') }}">
                                         <span class="menu-bullet">
                                             <span class="bullet bullet-dot"></span>
@@ -272,55 +272,171 @@
                                         <span class="menu-title">Seluruh Pegawai</span>
                                 </a>
                             </div>
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                                <span class="menu-link"><span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                    </span><span class="menu-title">User Profile</span>
+                            
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ (request()->routeIs('admin.karyawan.*') && (request()->has('status') || request()->has('jenis_pegawai'))) ? 'hover show' : '' }}">
+                                <span class="menu-link">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Jenis Pegawai</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <div class="menu-sub menu-sub-accordion">
                                     <div class="menu-item">
-                                        <a class="menu-link" href="/metronic8/demo39/pages/user-profile/overview.html">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '1') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 1]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">PNS</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '7') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 7]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">PPPK</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '3' && request()->get('jenis_pegawai') == '2') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 3, 'jenis_pegawai' => 2]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">BLUD</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '3' && request()->get('jenis_pegawai') == '1') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 3, 'jenis_pegawai' => 1]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">PEMKO</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '4') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 4]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">PT</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '2') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 2]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">Honor</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a 
+                                            class="menu-link @if (request()->routeIs('admin.karyawan.*') && request()->get('status') == '6') active @endif"
+                                            href="{{ route('admin.karyawan.index', ['status' => 6]) }}">
+                                                <span class="menu-bullet">
+                                                    <span class="bullet bullet-dot"></span>
+                                                </span>
+                                                <span class="menu-title">THL</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="menu-item">
+                                <a 
+                                    class="menu-link @if (request()->routeIs('admin.karyawan-luar.*')) active @endif"
+                                    href="{{ route('admin.karyawan-luar.index') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Pegawai Luar</span>
+                                </a>
+                            </div>
+                            
+                            <div class="menu-item">
+                                <a 
+                                    class="menu-link @if (request()->routeIs('admin.karyawan-belum-lengkap.*')) active @endif"
+                                    href="{{ route('admin.karyawan-belum-lengkap.index') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Pegawai Belum Lengkap</span>
+                                </a>
+                            </div>
+                            <!--end:Menu item-->
+
+                            <!--begin:Menu item-->
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion @if (request()->routeIs('admin.pegawai-tidak-aktif.*')) hover show @endif">
+                                <!--begin:Menu link-->
+                                <span class="menu-link">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Pegawai Tidak Aktif</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <!--end:Menu link-->
+                                
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <a class="menu-link @if (request()->routeIs('admin.pegawai-tidak-aktif.pensiun')) active @endif" 
+                                           href="{{ route('admin.pegawai-tidak-aktif.pensiun') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Seluruh Pegawai</span>
+                                            <span class="menu-title">Pegawai Pensiun</span>
                                         </a>
                                     </div>
-                                    <div class="menu-item"><a class="menu-link"
-                                            href="/metronic8/demo39/pages/user-profile/projects.html"><span
-                                                class="menu-bullet"><span class="bullet bullet-dot"></span></span><span
-                                                class="menu-title">Projects</span></a>
-                                    </div>
-                                    <div class="menu-item"><a class="menu-link"
-                                            href="/metronic8/demo39/pages/user-profile/campaigns.html"><span
-                                                class="menu-bullet"><span class="bullet bullet-dot"></span></span><span
-                                                class="menu-title">Campaigns</span></a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <!--begin:Menu link--><a class="menu-link"
-                                            href="/metronic8/demo39/pages/user-profile/documents.html"><span
-                                                class="menu-bullet"><span class="bullet bullet-dot"></span></span><span
-                                                class="menu-title">Documents</span></a>
-                                        <!--end:Menu link-->
-                                    </div>
                                     <!--end:Menu item-->
+                                    
                                     <!--begin:Menu item-->
                                     <div class="menu-item">
-                                        <!--begin:Menu link--><a class="menu-link"
-                                            href="/metronic8/demo39/pages/user-profile/followers.html"><span
-                                                class="menu-bullet"><span class="bullet bullet-dot"></span></span><span
-                                                class="menu-title">Followers</span></a>
-                                        <!--end:Menu link-->
+                                        <a class="menu-link @if (request()->routeIs('admin.pegawai-tidak-aktif.keluar')) active @endif" 
+                                           href="{{ route('admin.pegawai-tidak-aktif.keluar') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Pegawai Keluar</span>
+                                        </a>
                                     </div>
                                     <!--end:Menu item-->
+                                    
                                     <!--begin:Menu item-->
                                     <div class="menu-item">
-                                        <!--begin:Menu link--><a class="menu-link"
-                                            href="/metronic8/demo39/pages/user-profile/activity.html"><span
-                                                class="menu-bullet"><span class="bullet bullet-dot"></span></span><span
-                                                class="menu-title">Activity</span></a>
-                                        <!--end:Menu link-->
+                                        <a class="menu-link @if (request()->routeIs('admin.pegawai-tidak-aktif.tugas-belajar')) active @endif" 
+                                           href="{{ route('admin.pegawai-tidak-aktif.tugas-belajar') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Pegawai Tugas Belajar</span>
+                                        </a>
+                                    </div>
+                                    <!--end:Menu item-->
+                                    
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <a class="menu-link @if (request()->routeIs('admin.pegawai-tidak-aktif.meninggal')) active @endif" 
+                                           href="{{ route('admin.pegawai-tidak-aktif.meninggal') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Pegawai Meninggal Dunia</span>
+                                        </a>
                                     </div>
                                     <!--end:Menu item-->
                                 </div>
@@ -410,6 +526,18 @@
                         </div>
                     @endif
                 @endif
+
+                <!-- Export Menu -->
+                <div class="menu-item">
+                    <a 
+                        class="menu-link @if (request()->routeIs('admin.export.*')) active @endif"
+                        href="{{ route('admin.export.index') }}">
+                            <span class="menu-icon">
+                                <i class="ki-outline ki-file-down fs-2"></i>
+                            </span>
+                            <span class="menu-title">Export Data</span>
+                    </a>
+                </div>
 
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.laporan.*') ? 'here show' : '' }}">
                     <span class="menu-link">
@@ -626,7 +754,7 @@
 
                 <!-- user management -->
                 @hasPermission('view_user_management')
-                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.user-management.*') ? 'here show' : '' }}">
+                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.user-management.*', 'admin.settings.user-management.*') ? 'here show' : '' }}">
                         <span class="menu-link">
                             {{-- <span class="menu-icon"><i class="ki-outline ki-gift fs-2"></i></span> --}}
                             <span class="menu-icon">
@@ -636,6 +764,18 @@
                         </span>
                         
                         <div class="menu-sub menu-sub-accordion">
+                            <!-- Native HRD User Access -->
+                            <div class="menu-item">
+                                <a 
+                                    class="menu-link @if (request()->routeIs('admin.settings.user-management.*')) active @endif"
+                                    href="{{ route('admin.settings.user-management.index') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">HRD User Access</span>
+                                </a>
+                            </div>
+                            
                             @hasPermission('view_roles')
                                 <div class="menu-item">
                                     <a 
@@ -644,7 +784,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Roles</span>
+                                            <span class="menu-title">Laravel Roles</span>
                                     </a>
                                 </div>
                             @endhasPermission
@@ -657,7 +797,7 @@
                                         <span class="menu-bullet">
                                             <span class="bullet bullet-dot"></span>
                                         </span>
-                                        <span class="menu-title">Permission</span>
+                                        <span class="menu-title">Laravel Permission</span>
                                 </a>
                             </div>
                             @endhasPermission
@@ -670,7 +810,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Users</span>
+                                            <span class="menu-title">Laravel Users</span>
                                     </a>
                                 </div>
                             @endhasPermission

@@ -136,21 +136,14 @@
                                     $tempat_tanggal_lahir = $item->tempat_lahir . ', ' . $tanggal_lahir;
 
                                     $filePathTte = $item->path_dokumen ?? '';
-                                    // https://e-rsud.langsakota.go.id/rsud_hrd/admin/mutasi-verifikasi
-                                    // tambahkan rsud_hrd pada url
-                                    // $urlFilePathtte = url($filePathTte);
-                                    // public/mutasi-nota-tte/2024/Nota Tugas Mutasi-b4d3295f225b4d879c84e77287ab1b98.pdf
-                                    // $urlFilePathtte = url($filePathTte);
-                                    // $urlFilePathtte = Storage::url($filePathTte);
-
-
-                                    // https://e-rsud.langsakota.go.id/rsud_hrd/public/storage/mutasi-nota-tte/2024/Nota%20Tugas%20Mutasi-b4d3295f225b4d879c84e77287ab1b98.pdf
-                                    // ini adalah url yang benar
-
-                                    // public/mutasi-nota-tte/2024/Nota Tugas Mutasi-b4d3295f225b4d879c84e77287ab1b98.pdf
-
-                                    // replace public menjadi storage dan kemudian jadikan seperti https://e-rsud.langsakota.go.id/rsud_hrd/public/storage/mutasi-nota-tte/2024/Nota%20Tugas%20Mutasi-b4d3295f225b4d879c84e77287ab1b98.pdf
-                                    $urlFilePathtte = url(str_replace('public', 'public/storage', $filePathTte));
+                                    
+                                    // Gunakan route download yang aman untuk hrd_files disk
+                                    if ($item->id_dokumen) {
+                                        $urlFilePathtte = route('admin.mutasi-on-process.download-document', $item->id_dokumen);
+                                    } else {
+                                        // Fallback untuk file lama yang masih di storage biasa
+                                        $urlFilePathtte = url(str_replace('public', 'public/storage', $filePathTte));
+                                    }
                                     
                                 @endphp
                                     <tr>

@@ -7,7 +7,6 @@ use Carbon\Carbon;
 use GuzzleHttp\Client;
 use Endroid\QrCode\QrCode;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Endroid\QrCode\Color\Color;
 use Illuminate\Support\Facades\DB;
 use Endroid\QrCode\Builder\Builder;
@@ -20,11 +19,12 @@ use Endroid\QrCode\Encoding\Encoding;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Endroid\QrCode\ErrorCorrectionLevel;
-use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
+use Yajra\DataTables\Facades\DataTables;
 use Intervention\Image\ImageManagerStatic as Image;
 use Endroid\QrCode\Label\Alignment\LabelAlignmentCenter;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
+use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf as PDF;
 // use Barryvdh\DomPDF\PDF;
 // use \Mpdf\Mpdf;
 
@@ -783,6 +783,33 @@ class SKController extends Controller
 
     public function finalisasi(Request $request)
     {
+        // Validasi input
+        $validator = Validator::make($request->all(), [
+            'tanggal' => 'required|date',
+            'passphrase' => 'required|string|min:1',
+            'urut_rincian_verif' => 'required',
+            'tahun_rincian_verif' => 'required',
+            'kd_karyawan' => 'required|array|min:1'
+        ], [
+            'tanggal.required' => 'Tanggal tanda tangan SK wajib diisi',
+            'tanggal.date' => 'Format tanggal tidak valid',
+            'passphrase.required' => 'Passphrase (Password TTE) wajib diisi',
+            'passphrase.min' => 'Passphrase tidak boleh kosong',
+            'urut_rincian_verif.required' => 'Data urut tidak valid',
+            'tahun_rincian_verif.required' => 'Data tahun tidak valid',
+            'kd_karyawan.required' => 'Data karyawan tidak valid',
+            'kd_karyawan.min' => 'Minimal harus ada satu karyawan yang dipilih'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 422,
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         // dd($request->all());
         $urut = $request->urut_rincian_verif;
         $tahun = $request->tahun_rincian_verif;
@@ -893,13 +920,17 @@ class SKController extends Controller
             ->count()
         ;
 
-        $pdfFilePath = $totalRow > 1
-            ? 'public/sk/SK Pegawai Kontrak-' . $tahun . '.pdf'
-            : 'public/sk/SK Pegawai Kontrak-' . $tahun . '-' . $kd_karyawan . '.pdf'
+        // Gunakan disk hrd_files untuk penyimpanan SK
+        $fileName = $totalRow > 1
+            ? 'SK_Pegawai_Kontrak_' . $tahun . '_' . $urut . '.pdf'
+            : 'SK_Pegawai_Kontrak_' . $tahun . '_' . $urut . '_' . $kd_karyawan . '.pdf'
         ;
+        
+        $pdfFilePath = 'sk-documents/' . $tahun . '/' . $fileName;
 
-        if (!Storage::exists('public/sk')) {
-            Storage::makeDirectory('public/sk');
+        // Pastikan direktori SK ada di disk hrd_files
+        if (!Storage::disk('hrd_files')->exists('sk-documents/' . $tahun)) {
+            Storage::disk('hrd_files')->makeDirectory('sk-documents/' . $tahun);
         }
 
         foreach ($getSk as $result) :
@@ -921,7 +952,8 @@ class SKController extends Controller
         Log::info('Data untuk PDF', ['data' => $data]);
         
         
-        $pdf = \PDF::loadView('sk.sk-pegawai-kontrak', $data, [], [
+        // Use LaravelMpdf yang tersedia di sistem
+        $pdf = PDF::loadView('sk.sk-pegawai-kontrak', $data, [], [
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
             'margin_top' => 5,
@@ -930,21 +962,23 @@ class SKController extends Controller
             'margin_left' => 15,
             'margin_header' => 5,
             'margin_footer' => 5,
-            // font size 11pt
             'default_font_size' => 11,
             'default_font' => 'bookman-old-style',
             'custom_font_dir' => base_path('public/assets/fonts/'),
             'custom_font_data' => [
                 'bookman-old-style' => [
                     'R' => 'Bookman Old Style Regular.ttf',
-                    // 'B' => 'Bookman Old Style Bold.ttf',
+                    'B' => 'Bookman Old Style Bold.ttf',
                     'I' => 'Bookman Old Style Italic.ttf',
-                    // 'BI' => 'Bookman Old Style Bold Italic.ttf'
+                    'BI' => 'Bookman Old Style Bold Italic.ttf'
                 ]
             ]
         ]);
 
-        Storage::put($pdfFilePath, $pdf->output());
+        // Simpan PDF ke disk hrd_files
+        $pdfOutput = $pdf->output();
+        
+        Storage::disk('hrd_files')->put($pdfFilePath, $pdfOutput);
 
         // do e-signature
         try {
@@ -1141,19 +1175,30 @@ class SKController extends Controller
 
         // $pdf = Pdf::loadView('sk.perjanjian-kerja', compact('results', 'direktur', 'tahun', 'logoLangsa'))->setPaper($customPaperSize, 'portrait');
 
-        // use App Container
-        $pdf = App::make('dompdf.wrapper');
-        $perjanjianPdf = $pdf->setOption([
-            'dpi' => 150,
+        // use App Container - use LaravelMpdf instead
+        $pdf = PDF::loadHTML($html, [], [
+            'format' => [215, 330], // 21.5 x 33 cm
+            'orientation' => 'P',
+            'margin_top' => 5,
+            'margin_right' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+            'default_font_size' => 11,
+            'default_font' => 'bookman-old-style',
+            'custom_font_dir' => base_path('public/assets/fonts/'),
+            'custom_font_data' => [
+                'bookman-old-style' => [
+                    'R' => 'Bookman Old Style Regular.ttf',
+                    'B' => 'Bookman Old Style Bold.ttf',
+                    'I' => 'Bookman Old Style Italic.ttf',
+                    'BI' => 'Bookman Old Style Bold Italic.ttf'
+                ]
+            ]
         ]);
 
-        // set paper size
-        $perjanjianPdf = $pdf->loadHTML($html)->setPaper($customPaperSize, 'portrait');
-
         return $pdf->stream('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf');
-        
-
-        // return $pdf->stream('Perjanjian-Kerja-' . $results->kd_karyawan . '-' . $results->tahun_sk . '.pdf');
     }
 
     // public function surat_sakit($id)
@@ -1295,7 +1340,7 @@ class SKController extends Controller
         ];
 
         // untuk halaman pertama margin atas 5, margin kanan 15, margin bawah 15, margin kiri 15 dan margin header 5, margin footer 5, kemudian untuk halaman kedua margin atas 15, margin kanan 15, margin bawah 15, margin kiri 15 dan margin header 5, margin footer 5
-        $pdf = \PDF::loadView('sk.perjanjian-kerja-page-1', $data, [], [
+        $pdf = PDF::loadView('sk.perjanjian-kerja-page-1', $data, [], [
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
             'margin_top' => 5,
@@ -1304,7 +1349,6 @@ class SKController extends Controller
             'margin_left' => 15,
             'margin_header' => 5,
             'margin_footer' => 5,
-            // font size 11pt
             'default_font_size' => 11,
             'default_font' => 'bookman-old-style',
             'custom_font_dir' => base_path('public/assets/fonts/'),
@@ -1317,39 +1361,6 @@ class SKController extends Controller
                 ]
             ]
         ]);
-
-        $pdf->getMpdf()->AddPageByArray([
-            'margin_top' => 15,
-            'margin_right' => 15,
-            'margin_bottom' => 15,
-            'margin_left' => 15,
-            'margin_header' => 15,
-            'margin_footer' => 5,
-        ]);
-        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-2', $data)->render());
-
-        // page 3
-        $pdf->getMpdf()->AddPageByArray([
-            'margin_top' => 15,
-            'margin_right' => 15,
-            'margin_bottom' => 15,
-            'margin_left' => 15,
-            'margin_header' => 15,
-            'margin_footer' => 5,
-        ]);
-        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-3', $data)->render());
-
-        // page 4
-        $pdf->getMpdf()->AddPageByArray([
-            'margin_top' => 15,
-            'margin_right' => 15,
-            'margin_bottom' => 15,
-            'margin_left' => 15,
-            'margin_header' => 15,
-            'margin_footer' => 5,
-        ]);
-        $pdf->getMpdf()->WriteHTML(view('sk.perjanjian-kerja-page-4', $data)->render());
-
 
         return $pdf->stream('Perjanjian Kerja-' . $results->kd_karyawan . '-' . $results->no_per_kerja . '-' . $tahun . '.pdf');
     }
@@ -1367,7 +1378,7 @@ class SKController extends Controller
                 'multipart' => [
                     [
                         'name' => 'file',
-                        'contents' => fopen(storage_path('app/' . $pdfFilePath), 'r'),
+                        'contents' => Storage::disk('hrd_files')->get($pdfFilePath),
                         'filename' => basename($pdfFilePath)
                     ],
                     [
@@ -1397,12 +1408,56 @@ class SKController extends Controller
                 // download the document
                 $this->downloadSignedDocument($id_dokumen);
 
+                // Hapus file temporary setelah berhasil dikirim ke server BSRE dan didownload
+                try {
+                    if (Storage::disk('hrd_files')->exists($pdfFilePath)) {
+                        Storage::disk('hrd_files')->delete($pdfFilePath);
+                        Log::info('File temporary SK berhasil dihapus', [
+                            'file_path' => $pdfFilePath,
+                            'urut' => $urut,
+                            'tahun' => $tahun,
+                            'kd_karyawan' => $kd_karyawan
+                        ]);
+                    }
+                } catch (\Exception $deleteException) {
+                    // Log error jika gagal menghapus file, tapi tidak menggagalkan proses utama
+                    Log::warning('Gagal menghapus file temporary SK', [
+                        'file_path' => $pdfFilePath,
+                        'error' => $deleteException->getMessage(),
+                        'urut' => $urut,
+                        'tahun' => $tahun,
+                        'kd_karyawan' => $kd_karyawan
+                    ]);
+                }
+
                 return response()->json([
                     'code' => 200,
                     'status' => 'success',
                     'message' => 'Proses TTE berhasil.'
                 ]);
             } else {
+                // Hapus file temporary jika TTE gagal
+                try {
+                    if (Storage::disk('hrd_files')->exists($pdfFilePath)) {
+                        Storage::disk('hrd_files')->delete($pdfFilePath);
+                        Log::info('File temporary SK dihapus karena TTE gagal', [
+                            'file_path' => $pdfFilePath,
+                            'response_code' => $response->getStatusCode(),
+                            'urut' => $urut,
+                            'tahun' => $tahun,
+                            'kd_karyawan' => $kd_karyawan
+                        ]);
+                    }
+                } catch (\Exception $deleteException) {
+                    Log::warning('Gagal menghapus file temporary SK setelah TTE gagal', [
+                        'file_path' => $pdfFilePath,
+                        'delete_error' => $deleteException->getMessage(),
+                        'urut' => $urut,
+                        'tahun' => $tahun,
+                        'kd_karyawan' => $kd_karyawan
+                    ]);
+                }
+
                 return response()->json([
                     'code' => 500,
                     'status' => 'error',
@@ -1411,6 +1466,29 @@ class SKController extends Controller
             }
         } catch (\Exception $e) {
             $this->serverError($kd_karyawan, $urut, $tahun);
+
+            // Hapus file temporary jika terjadi error dalam proses TTE
+            try {
+                if (Storage::disk('hrd_files')->exists($pdfFilePath)) {
+                    Storage::disk('hrd_files')->delete($pdfFilePath);
+                    Log::info('File temporary SK dihapus karena error TTE', [
+                        'file_path' => $pdfFilePath,
+                        'error' => $e->getMessage(),
+                        'urut' => $urut,
+                        'tahun' => $tahun,
+                        'kd_karyawan' => $kd_karyawan
+                    ]);
+                }
+            } catch (\Exception $deleteException) {
+                Log::warning('Gagal menghapus file temporary SK setelah error TTE', [
+                    'file_path' => $pdfFilePath,
+                    'delete_error' => $deleteException->getMessage(),
+                    'original_error' => $e->getMessage(),
+                    'urut' => $urut,
+                    'tahun' => $tahun,
+                    'kd_karyawan' => $kd_karyawan
+                ]);
+            }
 
             return response()->json([
                 'code' => 500,
@@ -1424,24 +1502,26 @@ class SKController extends Controller
     {
         $endpoint = "http://123.108.100.83:85/api/sign/download/" . $id_dokumen;
 
-        $filename = 'SK Pegawai Kontrak-' . $id_dokumen . '.pdf';
+        $filename = 'SK_Pegawai_Kontrak_TTE_' . $id_dokumen . '.pdf';
 
         $year = date('Y');
-        $directory = 'public/sk-tte/' . $year;
-        $filePath = $directory . '/' . $filename;
+        $filePath = 'sk-documents/' . $year . '/' . $filename;
 
-        if (!Storage::exists($directory)) {
-            Storage::makeDirectory($directory);
+        // Pastikan direktori ada di disk hrd_files
+        if (!Storage::disk('hrd_files')->exists('sk-documents/' . $year)) {
+            Storage::disk('hrd_files')->makeDirectory('sk-documents/' . $year);
         }
 
-        // store the file to storage
+        // Download file dari server TTE
         $client = new Client();
         $response = $client->request('GET', $endpoint, [
             'headers' => [
                 'Authorization' => 'Basic ZXNpZ246cXdlcnR5'
-            ],
-            'sink' => storage_path('app/' . $filePath)
+            ]
         ]);
+
+        // Simpan file ke disk hrd_files
+        Storage::disk('hrd_files')->put($filePath, $response->getBody()->getContents());
 
         // save to database
         DB::table('hrd_sk_pegawai_kontrak')
@@ -1616,6 +1696,116 @@ class SKController extends Controller
                 'id_dokumen' => $id,
             ])
         ;
+    }
+
+    /**
+     * Menampilkan dokumen SK dari disk hrd_files
+     */
+    public function showSkDocument($year, $filename)
+    {
+        try {
+            $filePath = 'sk-documents/' . $year . '/' . $filename;
+            
+            if (!Storage::disk('hrd_files')->exists($filePath)) {
+                abort(404, 'Dokumen SK tidak ditemukan');
+            }
+
+            $fileContent = Storage::disk('hrd_files')->get($filePath);
+            
+            // Determine MIME type based on file extension
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $mimeType = $extension === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+
+            return response($fileContent)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+                
+        } catch (\Exception $e) {
+            Log::error('Error displaying SK document: ' . $e->getMessage());
+            abort(500, 'Error saat mengakses dokumen SK');
+        }
+    }
+
+    /**
+     * Membersihkan file temporary SK yang sudah lama (lebih dari 24 jam)
+     * untuk menghemat ruang penyimpanan
+     */
+    public function cleanupTemporaryFiles()
+    {
+        try {
+            $currentYear = date('Y');
+            $skDocumentsPath = 'sk-documents/' . $currentYear;
+            
+            if (!Storage::disk('hrd_files')->exists($skDocumentsPath)) {
+                Log::info('Directory SK documents tidak ditemukan untuk cleanup', ['path' => $skDocumentsPath]);
+                return response()->json([
+                    'code' => 200,
+                    'status' => 'success',
+                    'message' => 'Tidak ada directory untuk dibersihkan'
+                ]);
+            }
+
+            $files = Storage::disk('hrd_files')->allFiles($skDocumentsPath);
+            $deletedCount = 0;
+            $deletedFiles = [];
+            
+            foreach ($files as $filePath) {
+                $fileName = basename($filePath);
+                
+                // Hanya hapus file yang belum ada dalam database (file temporary)
+                // dengan pattern: SK_Pegawai_Kontrak_YYYY_XXX_YYYYYY.pdf (bukan yang TTE)
+                if (preg_match('/^SK_Pegawai_Kontrak_\d{4}_\d+_\d+\.pdf$/', $fileName)) {
+                    
+                    // Cek apakah file sudah berumur lebih dari 24 jam
+                    $fileLastModified = Storage::disk('hrd_files')->lastModified($filePath);
+                    $hoursOld = (time() - $fileLastModified) / 3600;
+                    
+                    if ($hoursOld > 24) {
+                        // Cek apakah file sudah ada record di database dengan path_dokumen yang berbeda
+                        $fileNameParts = explode('_', str_replace('.pdf', '', $fileName));
+                        if (count($fileNameParts) >= 5) {
+                            $tahun = $fileNameParts[3];
+                            $urut = $fileNameParts[4];
+                            
+                            $hasSignedVersion = DB::table('hrd_sk_pegawai_kontrak')
+                                ->where('tahun_sk', $tahun)
+                                ->where('urut', $urut)
+                                ->whereNotNull('path_dokumen')
+                                ->where('path_dokumen', '!=', $filePath)
+                                ->exists();
+                                
+                            if ($hasSignedVersion) {
+                                Storage::disk('hrd_files')->delete($filePath);
+                                $deletedCount++;
+                                $deletedFiles[] = $fileName;
+                                
+                                Log::info('File temporary SK dihapus (cleanup)', [
+                                    'file_path' => $filePath,
+                                    'file_name' => $fileName,
+                                    'hours_old' => round($hoursOld, 2)
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return response()->json([
+                'code' => 200,
+                'status' => 'success',
+                'message' => "Cleanup selesai. {$deletedCount} file temporary dihapus.",
+                'deleted_count' => $deletedCount,
+                'deleted_files' => $deletedFiles
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error saat cleanup temporary files: ' . $e->getMessage());
+            return response()->json([
+                'code' => 500,
+                'status' => 'error',
+                'message' => 'Error saat cleanup: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
  

@@ -67,5 +67,6 @@ class Kernel extends HttpKernel
         'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
         'role.redirect' => \App\Http\Middleware\RedirectBasedOnRole::class,
+        'export' => \App\Http\Middleware\ExportMiddleware::class,
     ];
 }

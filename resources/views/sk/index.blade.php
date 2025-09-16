@@ -1080,8 +1080,44 @@
             e.preventDefault();
             var urut = $('#urut_rincian_verif').val();
             var tahun = $('#tahun_rincian_verif').val();
+            var tanggal = $('#tanggal').val().trim();
+            var passphrase = $('#passphrase').val().trim();
             var modal = $(this).closest('.modal');
             var form = modal.find('form')[0];
+
+            // Reset previous errors
+            $('.error-text').removeClass('d-block').addClass('d-none').empty();
+            $('.form-control').removeClass('is-invalid');
+
+            // Validasi tanggal dan passphrase
+            var hasErrors = false;
+
+            if (!tanggal) {
+                $('#tanggal').addClass('is-invalid');
+                $('.tanggal_error').removeClass('d-none').addClass('d-block').text('Tanggal tanda tangan SK wajib diisi');
+                hasErrors = true;
+            }
+
+            if (!passphrase) {
+                $('#passphrase').addClass('is-invalid');
+                $('.passphrase_error').removeClass('d-none').addClass('d-block').text('Passphrase (Password TTE) wajib diisi');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validasi Error',
+                    text: 'Mohon lengkapi semua field yang wajib diisi',
+                    showConfirmButton: true,
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
+
             var data = new FormData(form);
 
             // masukkan data urut dan tahun ke dalam form data
@@ -1174,6 +1210,14 @@
                                 refreshCsrfToken().done(function () {
                                     toastr.error('Token CSRF kadaluarsa, silahkan tekan tombol simpan kembali', 'Token CSRF Kadaluarsa');
                                 })
+                            } else if (xhr.status === 422) {
+                                // Handle validation errors
+                                var response = xhr.responseJSON;
+                                if (response && response.errors) {
+                                    handleFormErrors(response.errors);
+                                } else {
+                                    toastr.error(response.message || 'Validasi gagal, mohon periksa input Anda', 'Error Validasi');
+                                }
                             } else if (xhr.status === 500) {
                                 var response = xhr.responseJSON;
 
@@ -1256,6 +1300,30 @@
         // data-kt-menu-modal-add-sk="cancel"
         $(document).on('click', '[data-kt-menu-modal-add-sk="cancel"]', function () {
             $('#kt_modal_add_sk').modal('hide');
+        });
+
+        // Validasi real-time untuk field tanggal dan passphrase
+        $(document).on('input', '#tanggal', function() {
+            var value = $(this).val().trim();
+            if (value) {
+                $(this).removeClass('is-invalid');
+                $('.tanggal_error').removeClass('d-block').addClass('d-none').empty();
+            }
+        });
+
+        $(document).on('input', '#passphrase', function() {
+            var value = $(this).val().trim();
+            if (value) {
+                $(this).removeClass('is-invalid');
+                $('.passphrase_error').removeClass('d-block').addClass('d-none').empty();
+            }
+        });
+
+        // Reset form saat modal ditutup
+        $('#kt_modal_finalisasi').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
+            $('.error-text').removeClass('d-block').addClass('d-none').empty();
+            $('.form-control').removeClass('is-invalid');
         });
     </script>
 @endpush

@@ -24,10 +24,15 @@ class MutasiVerifikasiController extends Controller
             }
         }
 
-        $getMutasiVerifikasi = DB::table('view_verifikasi')
-            ->where('kd_tahap_mutasi', 2)
-            ->whereBetween('tmt_jabatan', [$startDate, $endDate])
-            ->orderBy('kd_mutasi', 'desc')
+        $getMutasiVerifikasi = DB::table('view_verifikasi as vv')
+            ->leftJoin('hrd_r_mutasi as hrm', function($join) {
+                $join->on('vv.kd_mutasi', '=', 'hrm.kd_mutasi')
+                     ->on('vv.kd_karyawan', '=', 'hrm.kd_karyawan');
+            })
+            ->select('vv.*', 'hrm.id_dokumen')
+            ->where('vv.kd_tahap_mutasi', 2)
+            ->whereBetween('vv.tmt_jabatan', [$startDate, $endDate])
+            ->orderBy('vv.kd_mutasi', 'desc')
             ->get();
 
             // dd($getMutasiVerifikasi);

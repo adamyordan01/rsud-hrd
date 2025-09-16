@@ -44,7 +44,7 @@ class JabatanFungsionalController extends Controller
                 ->addIndexColumn()
                 ->addColumn('nama_lengkap', function ($row) {
                     $gelarDepan = $row->gelar_depan ? $row->gelar_depan . ' ' : '';
-                    $gelarBelakang = $row->gelar_belakang ? ', ' . $row->gelar_belakang : '';
+                    $gelarBelakang = $row->gelar_belakang ? $row->gelar_belakang : '';
                     return $gelarDepan . $row->nama . $gelarBelakang;
                 })
                 ->addColumn('nip', function ($row) {

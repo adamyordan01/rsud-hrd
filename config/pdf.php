@@ -25,8 +25,15 @@ return [
     'watermark_image_alpha'    => 0.2,
     'watermark_image_size'     => 'D',
     'watermark_image_position' => 'P',
-    'custom_font_dir'          => '',
-    'custom_font_data'         => [],
+    'custom_font_dir'          => public_path('assets/fonts'),
+    'custom_font_data'         => [
+        'bookman-old-style' => [
+            'R' => 'Bookman Old Style Regular.ttf',
+            'B' => 'Bookman Old Style Bold.ttf',
+            'I' => 'Bookman Old Style Italic.ttf',
+            'BI' => 'Bookman Old Style Bold Italic.ttf',
+        ],
+    ],
     'auto_language_detection'  => false,
     'temp_dir'                 => storage_path('app'),
     'pdfa'                     => false,

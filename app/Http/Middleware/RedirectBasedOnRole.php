@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\PermissionHelper;
 
 class RedirectBasedOnRole
 {
@@ -23,8 +24,9 @@ class RedirectBasedOnRole
             return redirect()->route('login')->with('error', 'Akses Anda belum diatur. Silahkan hubungi admin untuk mendapatkan bantuan.');
         }
         
-        // Cek jika user hanya memiliki role pegawai_biasa
-        if ($user->hasRole('pegawai_biasa') && $user->roles->count() === 1) {
+        // Cek jika user hanya memiliki role pegawai_biasa HRD
+        $hrdPegawaiBiasaRole = PermissionHelper::addRolePrefix('pegawai_biasa');
+        if ($user->hasRole($hrdPegawaiBiasaRole) && $user->hasOnlyHrdRoles() && $user->roles->count() === 1) {
             // Jika mencoba mengakses area admin, redirect ke user dashboard
             if ($request->is('admin*')) {
                 return redirect('/user/dashboard');
