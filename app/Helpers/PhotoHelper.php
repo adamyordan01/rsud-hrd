@@ -16,9 +16,14 @@ class PhotoHelper
             return self::getDefaultPhotoUrl($type);
         }
         
-        // Cek apakah foto menggunakan sistem lama
-        if (Str::startsWith($karyawan->{$type}, 'rsud_') || $karyawan->{$type} === 'user.png') {
+        // Cek apakah foto menggunakan sistem lama, tapi skip user.png
+        if (Str::startsWith($karyawan->{$type}, 'rsud_') && $karyawan->{$type} !== 'user.png') {
             return 'https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $karyawan->{$type};
+        }
+        
+        // Jika user.png, langsung return default
+        if ($karyawan->{$type} === 'user.png') {
+            return self::getDefaultPhotoUrl($type);
         }
         
         // Cek apakah foto ada di disk hrd_files
@@ -47,9 +52,9 @@ class PhotoHelper
             case 'foto_square':
                 return asset('assets/media/avatars/blank.png');
             case 'foto':
-                return asset('assets/media/avatars/blank-cv.png');
+                return asset('assets/media/avatars/blank.png');
             case 'foto_small':
-                return asset('assets/media/avatars/blank-id.png');
+                return asset('assets/media/avatars/blank.png');
             default:
                 return asset('assets/media/avatars/blank.png');
         }
@@ -64,9 +69,14 @@ class PhotoHelper
             return false;
         }
         
-        // Cek sistem lama
-        if (Str::startsWith($karyawan->{$type}, 'rsud_') || $karyawan->{$type} === 'user.png') {
+        // Cek sistem lama, tapi skip user.png
+        if (Str::startsWith($karyawan->{$type}, 'rsud_') && $karyawan->{$type} !== 'user.png') {
             return true;
+        }
+        
+        // user.png tidak dianggap sebagai foto valid
+        if ($karyawan->{$type} === 'user.png') {
+            return false;
         }
         
         // Cek disk hrd_files
