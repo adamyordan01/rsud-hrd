@@ -69,9 +69,19 @@ class LoginController extends Controller
                 Auth::login($user);
                 $request->session()->regenerate();
                 
-                // Tentukan redirect berdasarkan role
-                $redirectPath = $user->hasRole('pegawai_biasa') && $user->roles->count() === 1 
-                    ? route('user.dashboard.index')
+                // Check if user has multiple roles - if yes, redirect to role selector
+                if ($user->roles->count() > 1) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Berhasil melakukan login',
+                        'redirect' => route('role-selector.index')
+                    ]);
+                }
+                
+                // Single role - determine redirect destination
+                $singleRole = $user->roles->first();
+                $redirectPath = $singleRole->name === 'hrd_pegawai_biasa' 
+                    ? route('user.dashboard')
                     : route('admin.dashboard.index');
                 
                 return response()->json([
