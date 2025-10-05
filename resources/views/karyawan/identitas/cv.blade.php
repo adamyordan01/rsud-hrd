@@ -50,13 +50,17 @@
                         </li>
                     </ul>
                 </div>
-                <div class="d-flex align-items-center gap-2 gap-lg-3 d-none">
+                <div class="d-flex align-items-center gap-2 gap-lg-3">
                     <a
-                        {{-- href="{{ route('admin.karyawan.print-cv', $karyawan->kd_karyawan) }}" --}}
-                        href="#"
+                        href="{{ route('admin.karyawan.print-cv', $karyawan->kd_karyawan) }}"
                         class="btn btn-flex btn-primary h-40px fs-7 fw-bold"
                         target="_blank"
                     >
+                        <i class="ki-duotone ki-printer fs-2 me-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
                         Cetak CV
                     </a>
                 </div>
@@ -80,28 +84,16 @@
                         } --}}
 
                         @php
-                            $photoUrl = '';
-
-                            if ($karyawan->foto) {
-                                $photoUrl = url(str_replace('public', 'storage', $karyawan->foto));
-                            } elseif ($karyawan->foto && (Str::startsWith($karyawan->foto, 'rsud_') || $karyawan->foto === 'user.png')) {
-                                $photoUrl = 'https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $karyawan->foto;
-                            }
+                            // Menggunakan PhotoHelper untuk konsistensi
+                            $photoUrl = PhotoHelper::getPhotoUrl($karyawan, 'foto');
+                            $hasValidPhoto = PhotoHelper::hasPhoto($karyawan, 'foto');
                         @endphp
 
-                        @if ($karyawan->foto)
-                            <img
-                                src="{{ $photoUrl }}"
-                                alt="{{ $nama_lengkap }}"
-                                class="w-150px profile-photo"
-                            />
-                        @else
-                            <img
-                                src="{{ asset('assets/media/avatars/blank.png') }}"
-                                alt="" 
-                                class="w-150px profile-photo"
-                            />
-                        @endif
+                        <img
+                            src="{{ $photoUrl }}"
+                            alt="{{ $hasValidPhoto ? $nama_lengkap : 'Default Avatar' }}"
+                            class="w-150px profile-photo"
+                        />
                     </div>
                     <div class="mt-5">
                         <div class="fw-bold fs-6">ID. Pegawai</div>

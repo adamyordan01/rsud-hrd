@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>
-        {{ $title ?? 'RSUD Langsa | HRD' }}
+        CV-{{ $karyawan->nama ?? 'Karyawan' }}
     </title>
     <meta charset="utf-8" />
     <meta name="description" content="HRD - RSUD LANGSA" />
@@ -21,6 +21,185 @@
 
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+    
+    <style>
+        /* Print Styles untuk A4 dan F4 Portrait */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0.5in;
+                @bottom-right {
+                    content: "RSUD Langsa";
+                    font-size: 10px;
+                    color: #999999;
+                    font-family: Inter, sans-serif;
+                    margin-right: 20px;
+                    margin-bottom: 10px;
+                }
+            }
+            
+            /* Alternative untuk F4 - uncomment jika diperlukan */
+            /*
+            @page {
+                size: 210mm 330mm; /* F4 size 
+                margin: 0.5in;
+                @bottom-right {
+                    content: "RSUD Langsa";
+                    font-size: 10px;
+                    color: #999999;
+                    font-family: Inter, sans-serif;
+                    margin-right: 20px;
+                    margin-bottom: 10px;
+                }
+            }
+            */
+            
+            /* Remove all borders and outlines */
+            * {
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
+            }
+            
+            /* Force horizontal layout pada print */
+            .row.cv-print-layout {
+                display: flex !important;
+                flex-direction: row !important;
+                border: none !important;
+            }
+            
+            .col-sidebar {
+                flex: 0 0 25% !important;
+                max-width: 25% !important;
+                width: 25% !important;
+                display: block !important;
+                border: none !important;
+                border-right: none !important;
+            }
+            
+            .col-content {
+                flex: 0 0 75% !important;
+                max-width: 75% !important; 
+                width: 75% !important;
+                display: block !important;
+                border: none !important;
+                border-left: none !important;
+            }
+            
+            /* Adjust font sizes for print */
+            body { font-size: 12px !important; }
+            .fs-6 { font-size: 11px !important; }
+            .fs-2 { font-size: 18px !important; }
+            h4 { font-size: 14px !important; }
+            
+            /* Photo adjustments */
+            .w-150px { width: 120px !important; }
+            
+            /* Table adjustments */
+            table { font-size: 11px !important; }
+            
+            /* Remove all background colors and ensure white background */
+            body { 
+                background: white !important; 
+                background-color: white !important;
+            }
+            
+            .bg-light { 
+                background-color: #f8f9fa !important; 
+                border: none !important;
+            }
+            
+            /* Remove any container backgrounds */
+            .app-root, .app-page, .app-wrapper, .app-main, .app-content {
+                background: transparent !important;
+                background-color: transparent !important;
+            }
+            
+            /* Ensure content fits */
+            .container-fluid { 
+                padding: 0 !important; 
+                background: transparent !important;
+            }
+            .p-5 { padding: 1rem !important; }
+            
+            /* Page breaks */
+            .page-break { page-break-before: always; }
+            
+            /* Hide unnecessary elements */
+            .d-print-none { display: none !important; }
+            
+            /* Remove any footer or bottom elements */
+            footer, .footer { display: none !important; }
+            
+            /* Ensure no extra spacing at bottom */
+            .mb-5 { margin-bottom: 0 !important; }
+            
+            /* Remove any form elements or buttons */
+            button, input, select, textarea { display: none !important; }
+            
+            /* Remove any navigation or header elements */
+            nav, .navbar, .nav { display: none !important; }
+            
+            /* Improve table layout and remove borders */
+            table {
+                border: none !important;
+                border-collapse: collapse !important;
+            }
+            
+            table tr, table td, table th {
+                border: none !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                border-bottom: none !important;
+            }
+            
+            table tr td:first-child {
+                font-weight: bold;
+                width: 40%;
+                border: none !important;
+            }
+            
+            table tr td:last-child {
+                width: 60%;
+                border: none !important;
+            }
+            
+            /* Better spacing for sections */
+            .d-flex.align-items-start {
+                margin-bottom: 15px !important;
+            }
+            
+            /* Improve hr styling - make them very light or remove */
+            hr {
+                margin: 8px 0 !important;
+                border: none !important;
+                border-top: 1px solid #e9ecef !important;
+                background: none !important;
+            }
+            
+            /* Alternative: completely hide hr if not needed */
+            /* hr { display: none !important; } */
+        }
+        
+        /* Screen styles - untuk preview sebelum print */
+        @media screen {
+            .cv-print-layout {
+                display: flex;
+                flex-wrap: nowrap;
+            }
+            
+            .col-sidebar {
+                flex: 0 0 25%;
+                max-width: 25%;
+            }
+            
+            .col-content {
+                flex: 0 0 75%;
+                max-width: 75%;
+            }
+        }
+    </style>
 </head>
 <body>
     @inject('carbon', 'Carbon\Carbon')
@@ -44,24 +223,21 @@
                 <div class="app-main flex-column flex-row-fluid " id="kt_app_main">
                     <div class="d-flex flex-column flex-column-fluid">
                         <div id="kt_app_content" class="app-content  flex-column-fluid ">
-                            <div id="kt_app_content_container" class="app-container  container-fluid ">
-                                <div class="row g-0 mb-5">
-                                    <div class="col-md-3 p-5 bg-light">
+                            <div id="kt_app_content_container" class="app-container container-fluid">
+                                <div class="row g-0 mb-5 cv-print-layout">
+                                    <div class="col-sidebar p-5 bg-light">
                                         <div class="text-center pb-5">
-                                            {{-- https://e-rsud.langsakota.go.id/hrd/user/images/profil/.$karyawan->foto --}}
-                                            @if ($karyawan->foto)
-                                                <img
-                                                    src="https://e-rsud.langsakota.go.id/hrd/user/images/profil/{{ $karyawan->foto }}"
-                                                    alt="" 
-                                                    class="w-150px rounded"
-                                                />
-                                            @else
-                                                <img
-                                                    src="{{ asset('assets/media/avatars/blank.png') }}"
-                                                    alt="" 
-                                                    class="w-150px rounded"
-                                                />
-                                            @endif
+                                            @php
+                                                // Menggunakan PhotoHelper untuk konsistensi
+                                                $photoUrl = PhotoHelper::getPhotoUrl($karyawan, 'foto');
+                                                $hasValidPhoto = PhotoHelper::hasPhoto($karyawan, 'foto');
+                                            @endphp
+                                            
+                                            <img
+                                                src="{{ $photoUrl }}"
+                                                alt="{{ $hasValidPhoto ? $nama_lengkap : 'Default Avatar' }}"
+                                                class="w-150px rounded"
+                                            />
                                         </div>
                                         <div class="mt-5">
                                             <div class="fw-bold fs-6">ID. Pegawai</div>
@@ -228,7 +404,7 @@
                                         </div>
                                         <hr class="border-gray-600">
                                     </div>
-                                    <div class="col-md-9 p-5">
+                                    <div class="col-content p-5">
                                         <div class="bg-white mb-2">
                                             <div class="fw-bold fs-2">{{ $nama_lengkap }}</div>
                                             <div class="fs-6">
@@ -830,5 +1006,78 @@
 
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+    
+    <script>
+        // Set nama file untuk PDF
+        const namaKaryawan = '{{ $karyawan->nama ?? "Karyawan" }}';
+        const originalTitle = document.title;
+        
+        // Function untuk set nama file PDF
+        function setFileNameForPrint() {
+            document.title = `CV-${namaKaryawan}`;
+        }
+        
+        // Function untuk restore original title
+        function restoreTitle() {
+            document.title = originalTitle;
+        }
+        
+        // Auto print when page loads
+        window.addEventListener('load', function() {
+            setFileNameForPrint();
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
+        
+        // Function untuk switch ukuran kertas
+        function setPaperSize(size) {
+            const style = document.createElement('style');
+            if (size === 'f4') {
+                style.textContent = `
+                    @media print {
+                        @page {
+                            size: 210mm 330mm;
+                            margin: 0.5in;
+                        }
+                    }
+                `;
+            } else {
+                style.textContent = `
+                    @media print {
+                        @page {
+                            size: A4 portrait;
+                            margin: 0.5in;
+                        }
+                    }
+                `;
+            }
+            document.head.appendChild(style);
+        }
+        
+        // Event listener untuk mendeteksi print
+        window.addEventListener('beforeprint', function() {
+            setFileNameForPrint();
+        });
+        
+        window.addEventListener('afterprint', function() {
+            restoreTitle();
+        });
+        
+        // Override window.print untuk selalu set nama file
+        const originalPrint = window.print;
+        window.print = function() {
+            setFileNameForPrint();
+            originalPrint();
+        };
+        
+        // Keyboard shortcut untuk print
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
 </body>
 </html>
