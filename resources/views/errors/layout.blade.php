@@ -159,7 +159,7 @@
         <div class="error-content error-animation">
             <!-- Logo -->
             <div class="logo-container">
-                <img src="https://rsud_hrd.me/assets/media/logos/logo-hrd.png" alt="RSUD Langsa HRD" />
+                <img src="{{ asset('assets/media/logos/logo-hrd.png') }}" alt="RSUD Langsa HRD" />
             </div>
             
             <!-- Error Code -->
