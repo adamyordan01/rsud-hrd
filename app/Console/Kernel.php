@@ -35,6 +35,14 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('02:30')
                  ->withoutOverlapping()
                  ->runInBackground();
+
+        // Backup karyawan data setiap awal bulan pada jam 1 pagi
+        // Backup dilakukan untuk bulan sebelumnya
+        $schedule->command('backup:karyawan')
+                 ->monthlyOn(1, '01:00')
+                 ->withoutOverlapping()
+                 ->runInBackground()
+                 ->appendOutputTo(storage_path('logs/backup.log'));
     }
 
     /**
