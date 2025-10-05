@@ -44,5 +44,18 @@
                 Edit
             </a>
         </div>
+
+        <div class="menu-item px-3">
+            <a 
+                href="{{ route('admin.user-management.roles.edit-permissions', $role->id) }}"
+                class="menu-link px-3"
+            >
+                <i class="ki-duotone ki-shield-tick fs-3 me-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                </i>
+                Edit Permissions
+            </a>
+        </div>
     </div>
 </div>
