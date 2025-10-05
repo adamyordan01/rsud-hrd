@@ -14,6 +14,7 @@
             </div>
         </div>
 
+        @can('hrd_edit_karyawan')
         <div class="menu-item px-3">
             <a href="{{ route('admin.karyawan.edit', $karyawan->kd_karyawan) }}" class="menu-link px-3">
                 <i class="ki-duotone ki-pencil fs-3 me-2">
@@ -23,7 +24,9 @@
                 Edit
             </a>
         </div>
+        @endcan
 
+        @can('hrd_view_karyawan_cv')
         <!-- Curriculums Vitaes -->
         <div class="menu-item px-3">
             {{-- Route::get('karyawan/identitas/cv/{id}', [CvController::class, 'show'])->name('cv'); --}}
@@ -32,7 +35,9 @@
                 Curriculum Vitae (CV)
             </a>
         </div>
+        @endcan
 
+        @can('hrd_view_karyawan_riwayat')
         <!-- Riwayat -->
         <div class="menu-item px-3">
             {{-- Route::get('/karyawan/show/{id}', [KaryawanController::class, 'show'])->name('show'); --}}
@@ -41,5 +46,6 @@
                 Riwayat
             </a>
         </div>
+        @endcan
     </div>
 </div>

@@ -996,9 +996,12 @@
                             toastr.success(response.message);
                             $('#uploadPhotoModal').modal('hide');
                             
-                            // Refresh halaman untuk menampilkan foto baru
+                            // Refresh halaman untuk menampilkan foto baru dengan cache clear
                             setTimeout(function() {
-                                location.reload();
+                                // Add refresh parameter to clear cache
+                                const currentUrl = new URL(window.location);
+                                currentUrl.searchParams.set('refresh', '1');
+                                window.location.href = currentUrl.toString();
                             }, 1000);
                         }
                     },
