@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Identitas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Karyawan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,7 @@ class CvController extends Controller
 
     public function show($id)
     {
-        $karyawan = DB::table('view_tampil_karyawan')->where('kd_karyawan', $id)->first();
+        $karyawan = Karyawan::where('kd_karyawan', $id)->firstOrFail();
         // dd($karyawan);
         $keluarga = DB::table('HRD_R_KELUARGA')
             ->select(
@@ -131,7 +132,7 @@ class CvController extends Controller
 
     public function print($id)
     {
-        $karyawan = DB::table('view_tampil_karyawan')->where('kd_karyawan', $id)->first();
+        $karyawan = Karyawan::where('kd_karyawan', $id)->firstOrFail();
         $keluarga = DB::table('HRD_R_KELUARGA')
             ->select(
                 'HRD_R_KELUARGA.KD_KARYAWAN', 
