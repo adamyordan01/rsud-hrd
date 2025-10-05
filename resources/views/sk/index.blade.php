@@ -46,14 +46,13 @@
                     </ul>
                 </div>
                 <div class="d-flex align-items-center gap-2 gap-lg-3">
-                    {{-- <a href="#"
-                        class="btn btn-flex btn-outline btn-color-gray-700 btn-active-color-primary bg-body h-40px fs-7 fw-bold"
-                        data-bs-toggle="modal" data-bs-target="#kt_modal_view_users">
-                        Add Member
-                    </a> --}}
-                    {{-- <button type="button" class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_add_anggota">
-                        <i class="ki-duotone ki-plus fs-2"></i>Tambah Anggota
-                    </button> --}}
+                    <a href="{{ route('admin.sk-kontrak.batch-monitor') }}" class="btn btn-flex btn-light-info h-40px fs-7 fw-bold">
+                        <i class="ki-duotone ki-pulse fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Monitor Queue
+                    </a>
 
                     <a href="javascript:void(0)" class="btn btn-flex btn-primary h-40px fs-7 fw-bold" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_add_sk">
@@ -316,14 +315,55 @@
                             </div>
                             <div class="fv-plugins-message-container invalid-feedback error-text passphrase_error"></div>
                         </div>
+
+                        <div class="d-flex flex-column fv-row mb-5" id="batch-processing-option">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="enable_batch_processing" name="enable_batch_processing" checked>
+                                <label class="form-check-label fw-semibold fs-6" for="enable_batch_processing">
+                                    Proses Background (Batch Processing)
+                                </label>
+                            </div>
+                            <div class="form-text text-muted">
+                                <i class="ki-duotone ki-information fs-6 me-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                Dengan opsi ini, proses TTE akan berjalan di background. Anda tidak perlu menunggu sampai selesai dan akan mendapat notifikasi saat proses selesai.
+                            </div>
+                            <div id="karyawan-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info d-flex align-items-center p-3">
+                                    <i class="ki-duotone ki-user-tick fs-2 text-info me-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <div>
+                                        <div class="fw-bold" id="karyawan-count-text">Memproses 0 karyawan</div>
+                                        <div class="text-muted fs-7" id="processing-info">Estimasi waktu: ~0 menit</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer text-end">
                     <button type="reset" class="btn btn-light me-3" data-kt-menu-modal-finalisasi="cancel" data-bs-dismiss="modal">
                         Batal
                     </button>
-                    <button type="submit" class="btn btn-primary" data-kt-menu-modal-action-finalisasi="submit">
+                    <button type="submit" class="btn btn-primary" data-kt-menu-modal-action-finalisasi="submit" id="btn-finalisasi-normal">
                         <span class="indicator-label">Proses TTE</span>
+                        <span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                    </button>
+                    <button type="submit" class="btn btn-success" data-kt-menu-modal-action-finalisasi-batch="submit" id="btn-finalisasi-batch" style="display: none;">
+                        <span class="indicator-label">
+                            <i class="ki-duotone ki-rocket fs-2 me-1">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Proses Batch TTE
+                        </span>
                         <span class="indicator-progress">Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
                     </button>
                 </div>
@@ -331,6 +371,8 @@
         </div>
     </div>
     <!--end::Modal - Finalisasi TTE-->
+
+    @include('sk.batch-progress-modal')
 
 @endsection
 
@@ -359,14 +401,80 @@
          
         // Fungsi untuk reload tabel setelah verifikasi
         function reloadDataTables() {
-            if (skTable) {
+            console.log('Reloading DataTables...');
+            
+            // Reload main SK table
+            if (typeof skTable !== 'undefined' && skTable) {
+                console.log('Reloading main SK table');
                 $('.search-spinner').show();
                 skTable.ajax.reload(function() {
                     $('.search-spinner').hide();
+                    console.log('Main SK table reloaded successfully');
+                }, false); // false agar tidak reset page
+            }
+            
+            // Reload rincian table jika ada
+            if (typeof dataTableTerakhir !== 'undefined' && dataTableTerakhir) {
+                console.log('Reloading rincian table');
+                dataTableTerakhir.ajax.reload(function() {
+                    console.log('Rincian table reloaded successfully');
                 }, false); // false agar tidak reset page
             }
         }
 
+        // Fungsi untuk force reload dengan reset page (jika diperlukan)
+        function forceReloadDataTables() {
+            console.log('Force reloading DataTables...');
+            
+            if (typeof skTable !== 'undefined' && skTable) {
+                $('.search-spinner').show();
+                skTable.ajax.reload(function() {
+                    $('.search-spinner').hide();
+                }, true); // true untuk reset ke page 1
+            }
+            
+            if (typeof dataTableTerakhir !== 'undefined' && dataTableTerakhir) {
+                dataTableTerakhir.ajax.reload(null, true);
+            }
+        }
+
+        // Load batch progress modal
+        function showBatchProgressModal(batchId, totalKaryawan, estimatedCompletion) {
+            // Load modal content
+            $.get('{{ route("admin.sk-kontrak.batch-progress-modal") }}', {
+                batch_id: batchId,
+                total_karyawan: totalKaryawan,
+                estimated_completion: estimatedCompletion
+            })
+            .done(function(html) {
+                // Remove existing modal if any
+                $('#batch-progress-modal').remove();
+                
+                // Append new modal to body
+                $('body').append(html);
+                
+                // Show modal
+                $('#batch-progress-modal').modal('show');
+            })
+            .fail(function() {
+                toastr.error('Gagal memuat modal progress', 'Error');
+            });
+        }
+
+        // Handle form errors
+        function handleFormErrors(errors) {
+            $.each(errors, function(field, messages) {
+                var input = $('[name="' + field + '"]');
+                input.addClass('is-invalid');
+                
+                var errorContainer = $('.' + field + '_error');
+                if (errorContainer.length > 0) {
+                    errorContainer.removeClass('d-none').addClass('d-block').text(messages[0]);
+                }
+            });
+        }
+
+        // Reload data tables
         $(document).ready(function () {
             // Tambahkan indikator loading
             var searchIndicator = $('<span class="spinner-border spinner-border-sm text-primary ms-2 search-spinner" role="status" aria-hidden="true" style="display: none;"></span>');
@@ -668,8 +776,10 @@
                         timer: 1500
                     }).then((result) => {
                         if (response.code == 200) {
-                            // lakukan reload datatable
-                            reloadDataTables();
+                            // lakukan reload datatable dengan delay untuk memastikan data tersimpan
+                            setTimeout(function() {
+                                reloadDataTables();
+                            }, 500);
                             $('#kt_modal_add_sk').modal('hide');
                             $('#add_sk')[0].reset();
                         }
@@ -795,13 +905,17 @@
                                         showConfirmButton: true,
                                     }).then((result) => {
                                         if (result.isConfirmed) {
-                                            // reload datatable
-                                            reloadDataTables();
+                                            // reload datatable dengan delay
+                                            setTimeout(function() {
+                                                reloadDataTables();
+                                            }, 500);
                                             $('#kt_modal_verif').modal('hide');
                                             $('#kt_rincian_verif_1_table').html('');
                                         } else {
-                                            // reload datatable
-                                            reloadDataTables();
+                                            // reload datatable dengan delay
+                                            setTimeout(function() {
+                                                reloadDataTables();
+                                            }, 500);
                                             $('#kt_modal_verif').modal('hide');
                                             $('#kt_rincian_verif_1_table').html('');
                                         }
@@ -1042,6 +1156,43 @@
                                         // show finalisasi modal
                                         $('#finalisasi-title').text('Proses TTE SK');
                                         $('#kt_modal_finalisasi').modal('show');
+                                        
+                                        // Auto-enable batch processing untuk multiple karyawan
+                                        var kdKaryawanArray = data.get('kd_karyawan[]');
+                                        var karyawanCount = 0;
+                                        
+                                        if (typeof kdKaryawanArray === 'string') {
+                                            // Single value
+                                            karyawanCount = 1;
+                                        } else if (Array.isArray(kdKaryawanArray)) {
+                                            // Array
+                                            karyawanCount = kdKaryawanArray.length;
+                                        } else {
+                                            // Multiple values, count via FormData
+                                            var karyawanValues = data.getAll('kd_karyawan[]');
+                                            karyawanCount = karyawanValues.length;
+                                        }
+                                        
+                                        console.log('Detected karyawan count:', karyawanCount);
+                                        
+                                        // Update info karyawan
+                                        $('#karyawan-count-text').text(`Memproses ${karyawanCount} karyawan`);
+                                        $('#processing-info').text(`Estimasi waktu: ~${Math.ceil(karyawanCount * 0.5)} menit`);
+                                        $('#karyawan-info').show();
+                                        
+                                        // Auto-enable batch processing untuk 2+ karyawan
+                                        if (karyawanCount > 1) {
+                                            $('#enable_batch_processing').prop('checked', true);
+                                            $('#btn-finalisasi-normal').hide();
+                                            $('#btn-finalisasi-batch').show();
+                                            
+                                            // Show info about automatic batch selection
+                                            toastr.info(`Batch processing otomatis diaktifkan untuk ${karyawanCount} karyawan`, 'Info');
+                                        } else {
+                                            $('#enable_batch_processing').prop('checked', false);
+                                            $('#btn-finalisasi-normal').show();
+                                            $('#btn-finalisasi-batch').hide();
+                                        }
                                     }
                                 })
                             } else {
@@ -1166,30 +1317,47 @@
                             $('#tahun_rincian_verif').val(tahun);
 
                             if (response.code == 200) {
-                                console.log('Success execute the sweet alert');
-                                toastr.success(response.message, 'Success');
-
-                                // tutup modal finalisasi, kemudian setelah 1.5 detik reload halaman
-                                setTimeout(() => {
-                                    // $('#kt_modal_finalisasi').modal('hide');
-                                    // window.location.reload();
-                                    // reload datatable
-                                    reloadDataTables();
+                                // Check if system redirected to batch processing
+                                if (response.redirect_to_batch) {
+                                    Swal.close();
                                     $('#kt_modal_finalisasi').modal('hide');
-                                }, 1500);
+                                    
+                                    // Show notification about automatic batch processing
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Menggunakan Batch Processing',
+                                        html: `
+                                            <p>${response.message}</p>
+                                            <p class="text-muted">Jumlah karyawan: ${response.batch_size}</p>
+                                            <p class="text-info">Sistem akan menggunakan background processing untuk menghindari timeout.</p>
+                                        `,
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Lanjutkan dengan Batch',
+                                        cancelButtonText: 'Batal',
+                                        customClass: {
+                                            confirmButton: 'btn btn-success',
+                                            cancelButton: 'btn btn-secondary'
+                                        }
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            // Trigger batch processing automatically
+                                            $('[data-kt-menu-modal-action-finalisasi-batch="submit"]').trigger('click');
+                                        }
+                                    });
+                                } else {
+                                    // Normal single processing success
+                                    console.log('Success execute the sweet alert');
+                                    toastr.success(response.message, 'Success');
 
-
-                                // Swal.fire({
-                                //     icon: 'success',
-                                //     title: 'Success',
-                                //     text: response.message,
-                                //     allowOutsideClick: false,
-                                //     showConfirmButton: true,
-                                // }).then((result) => {
-                                //     if (result.isConfirmed) {
-                                //         window.location.reload();
-                                //     }
-                                // })
+                                    // tutup modal finalisasi, kemudian setelah 1.5 detik reload halaman
+                                    setTimeout(() => {
+                                        // reload datatable dengan delay
+                                        setTimeout(function() {
+                                            reloadDataTables();
+                                        }, 500);
+                                        $('#kt_modal_finalisasi').modal('hide');
+                                    }, 1500);
+                                }
                             } else {
                                 toastr.error(response.message, 'Error');
 
@@ -1235,8 +1403,10 @@
                                     }).then((result) => {
                                         if (result.isConfirmed) {
                                             // window.location.reload();
-                                            // reload datatable
-                                            reloadDataTables();
+                                            // reload datatable dengan delay
+                                            setTimeout(function() {
+                                                reloadDataTables();
+                                            }, 500);
                                             $('#kt_modal_finalisasi').modal('hide');
                                             $('#kt_rincian_verif_1_table').html('');
                                         }
@@ -1324,6 +1494,199 @@
             $(this).find('form')[0].reset();
             $('.error-text').removeClass('d-block').addClass('d-none').empty();
             $('.form-control').removeClass('is-invalid');
+            
+            // Reset karyawan info
+            $('#karyawan-info').hide();
+            $('#karyawan-count-text').text('Memproses 0 karyawan');
+            $('#processing-info').text('Estimasi waktu: ~0 menit');
+            
+            // Reset button visibility
+            $('#btn-finalisasi-normal').show();
+            $('#btn-finalisasi-batch').hide();
+            $('#enable_batch_processing').prop('checked', false);
+        });
+
+        // Toggle batch processing UI
+        $('#enable_batch_processing').on('change', function() {
+            var isChecked = $(this).is(':checked');
+            
+            if (isChecked) {
+                $('#btn-finalisasi-normal').hide();
+                $('#btn-finalisasi-batch').show();
+            } else {
+                $('#btn-finalisasi-normal').show();
+                $('#btn-finalisasi-batch').hide();
+            }
+        });
+
+        // Handler untuk batch processing
+        $(document).on('click', '[data-kt-menu-modal-action-finalisasi-batch="submit"]', function (e) {
+            e.preventDefault();
+            
+            var urut = $('#urut_rincian_verif').val();
+            var tahun = $('#tahun_rincian_verif').val();
+            var tanggal = $('#tanggal').val().trim();
+            var passphrase = $('#passphrase').val().trim();
+            var modal = $(this).closest('.modal');
+            var form = modal.find('form')[0];
+
+            // Reset previous errors
+            $('.error-text').removeClass('d-block').addClass('d-none').empty();
+            $('.form-control').removeClass('is-invalid');
+
+            // Validasi
+            var hasErrors = false;
+
+            if (!tanggal) {
+                $('#tanggal').addClass('is-invalid');
+                $('.tanggal_error').removeClass('d-none').addClass('d-block').text('Tanggal tanda tangan SK wajib diisi');
+                hasErrors = true;
+            }
+
+            if (!passphrase) {
+                $('#passphrase').addClass('is-invalid');
+                $('.passphrase_error').removeClass('d-none').addClass('d-block').text('Passphrase (Password TTE) wajib diisi');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validasi Error',
+                    text: 'Mohon lengkapi semua field yang wajib diisi',
+                    showConfirmButton: true,
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
+
+            // Get checked karyawan
+            var checkedKaryawan = [];
+            $('#kt_rincian_verif_1_table input[name="kd_karyawan[]"]:checked').each(function() {
+                checkedKaryawan.push($(this).val());
+            });
+
+            if (checkedKaryawan.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validasi Error',
+                    text: 'Minimal pilih satu karyawan untuk diproses',
+                    showConfirmButton: true,
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
+
+            var data = new FormData();
+            data.append('_token', $('meta[name="csrf-token"]').attr('content'));
+            data.append('urut_rincian_verif', urut);
+            data.append('tahun_rincian_verif', tahun);
+            data.append('tanggal', tanggal);
+            data.append('passphrase', passphrase);
+            
+            // Append all checked karyawan
+            checkedKaryawan.forEach(function(karyawan) {
+                data.append('kd_karyawan[]', karyawan);
+            });
+
+            Swal.fire({
+                title: 'Proses Batch TTE?',
+                html: `
+                    <div class="text-start">
+                        <p>Anda akan memproses TTE untuk <strong>${checkedKaryawan.length} karyawan</strong> secara batch.</p>
+                        <div class="alert alert-info">
+                            <i class="ki-duotone ki-information fs-2 text-info me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Proses akan berjalan di background. Anda akan menerima notifikasi progress dan dapat memantau status real-time.
+                        </div>
+                        <p class="text-muted">Estimasi waktu: ~${Math.ceil(checkedKaryawan.length * 0.5)} menit</p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Proses Batch!',
+                cancelButtonText: 'Batal',
+                customClass: {
+                    confirmButton: 'btn btn-success',
+                    cancelButton: 'btn btn-secondary'
+                },
+                showLoaderOnConfirm: true,
+                reverseButtons: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{{ route("admin.sk-kontrak.finalisasi-batch") }}',
+                        method: 'POST',
+                        processData: false,
+                        contentType: false,
+                        dataType: 'json',
+                        data: data,
+                        beforeSend: function() {
+                            Swal.fire({
+                                title: 'Memulai Proses Batch',
+                                text: 'Sedang menyiapkan queue processing...',
+                                showConfirmButton: false,
+                                allowOutsideClick: false,
+                                willOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                        },
+                        success: function(response) {
+                            if (response.code == 200) {
+                                Swal.close();
+                                
+                                // Close finalisasi modal
+                                $('#kt_modal_finalisasi').modal('hide');
+                                
+                                // Show batch progress modal
+                                showBatchProgressModal(
+                                    response.batch_id, 
+                                    response.total_karyawan, 
+                                    response.estimated_completion
+                                );
+                                
+                                toastr.success(response.message, 'Success');
+                                
+                                // Reload datatable dengan delay
+                                setTimeout(function() {
+                                    reloadDataTables();
+                                }, 500);
+                                
+                            } else {
+                                Swal.close();
+                                toastr.error(response.message, 'Error');
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.close();
+                            
+                            if (xhr.status === 422) {
+                                var response = xhr.responseJSON;
+                                if (response && response.errors) {
+                                    handleFormErrors(response.errors);
+                                } else {
+                                    toastr.error(response.message || 'Validasi gagal', 'Error Validasi');
+                                }
+                            } else if (xhr.status === 500) {
+                                var response = xhr.responseJSON;
+                                toastr.error(response.message || 'Terjadi kesalahan server', 'Error');
+                            } else {
+                                toastr.error('Terjadi kesalahan saat memulai proses batch', 'Error');
+                            }
+                        }
+                    });
+                }
+            });
         });
     </script>
 @endpush
