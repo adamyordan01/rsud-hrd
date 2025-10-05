@@ -96,6 +96,44 @@ return [
             ],
         ],
 
+        'mysql_queue' => [
+            'driver' => 'mysql',
+            'url' => env('QUEUE_DATABASE_URL'),
+            'host' => env('MYSQL_QUEUE_HOST', '127.0.0.1'),
+            'port' => env('MYSQL_QUEUE_PORT', '3306'),
+            'database' => env('MYSQL_QUEUE_DATABASE', 'rsud_hrd_queue'),
+            'username' => env('MYSQL_QUEUE_USERNAME', 'root'),
+            'password' => env('MYSQL_QUEUE_PASSWORD', ''),
+            'unix_socket' => env('MYSQL_QUEUE_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'live' => [
+            'driver' => 'sqlsrv',
+            'url' => env('LIVE_DATABASE_URL'),
+            'host' => env('LIVE_DB_HOST', '192.168.99.2'),
+            'port' => env('LIVE_DB_PORT', '1433'),
+            'database' => env('LIVE_DB_DATABASE', 'HRD'),
+            'username' => env('LIVE_DB_USERNAME', 'sa'),
+            'password' => env('LIVE_DB_PASSWORD', '1Tlangsa'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'encrypt' => env('LIVE_DB_ENCRYPT', 'no'),
+            'trust_server_certificate' => env('LIVE_DB_TRUST_SERVER_CERTIFICATE', 'true'),
+            'options' => [
+                PDO::ATTR_CASE => PDO::CASE_LOWER
+            ],
+        ],
+
     ],
 
     /*

@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Illuminate\Support\Facades\Validator;
-use App\Jobs\ProcessTteSkBatchJob;
 use Yajra\DataTables\Facades\DataTables;
 use Intervention\Image\ImageManagerStatic as Image;
 use Endroid\QrCode\Label\Alignment\LabelAlignmentCenter;
@@ -492,14 +491,13 @@ class SKController extends Controller
             if ($request->tujuan == 'single') {
                 $max = DB::table('hrd_sk_pegawai_kontrak')
                     ->selectRaw('case when max(urut) is null then 1 else max(urut)+1 end as urut, max(no_per_kerja) as no_per_kerja')
-                    ->where('tahun_sk', date('Y'))  // Filter by current year
                     ->first()
                 ;
     
                 $urut = $max ? $max->urut : 1;
                 $no_perjanjian = $max ? $max->no_per_kerja + 1 : 1;
 
-                $no_per_kerja = sprintf('%03s', $no_perjanjian); // Format 3 digit
+                $no_per_kerja = sprintf('%02s', $no_perjanjian);
 
                 $date = Carbon::create(date('Y'), 1, 1);
 
@@ -584,15 +582,13 @@ class SKController extends Controller
 
                 $max = DB::table('hrd_sk_pegawai_kontrak')
                     ->selectRaw('case when max(urut) is null then 1 else max(urut)+1 end as urut, max(no_per_kerja) as no_per_kerja')
-                    ->where('tahun_sk', date('Y'))  // Filter by current year
                     ->first()
                 ;
 
                 $urut = $max ? $max->urut : 1;
                 $no_perjanjian = $max ? $max->no_per_kerja + 1 : 1;
                 
-                // Untuk SK kolektif, semua karyawan dapat no_per_kerja yang sama
-                $no_per_kerja = sprintf('%03s', $no_perjanjian); // Format 3 digit: 001, 002, etc
+                $no_per_kerja = sprintf('%02s', $no_perjanjian);
 
                 $karyawan = DB::table('hrd_karyawan')
                     ->select('kd_karyawan', 'tgl_keluar_pensiun')
@@ -814,23 +810,12 @@ class SKController extends Controller
             ], 422);
         }
 
+        // dd($request->all());
         $urut = $request->urut_rincian_verif;
         $tahun = $request->tahun_rincian_verif;
         $kd_karyawan = $request->kd_karyawan;
         $tgl_ttd = $request->tanggal;
         $passphrase = $request->passphrase;
-
-        // Jika karyawan lebih dari 5, paksa menggunakan batch processing
-        if (count($kd_karyawan) > 5) {
-            Log::info('Redirecting to batch processing due to large number of employees', [
-                'total_karyawan' => count($kd_karyawan),
-                'urut' => $urut,
-                'tahun' => $tahun
-            ]);
-            
-            // Gunakan finalisasiBatch untuk menghindari timeout dan error HTML size
-            return $this->finalisasiBatch($request);
-        }
 
         // get max no sk from hrd_sk_pegawai_kontrak where year = $tahun
         $getMaxNoSk = DB::table('hrd_sk_pegawai_kontrak')
@@ -861,44 +846,33 @@ class SKController extends Controller
             }
     
             if ($update) {
-                // Untuk batch kecil (<=5 karyawan), tetap proses sinkron tapi dengan optimasi
-                if (count($kd_karyawan) == 1) {
-                    // Single employee - proses langsung
-                    $printSkResponse = $this->printSk($urut, $tahun, $kd_karyawan[0], $passphrase);
-                    $printSkData = json_decode($printSkResponse->getContent(), true);
-                    
-                    if ($printSkData['original']['code'] == 200) {
-                        return response()->json([
-                            'code' => 200,
-                            'status' => 'success',
-                            'message' => 'Data SK berhasil ditandatangani secara digital.',
-                        ]);
-                    } else {
-                        $this->failedVerification($kd_karyawan, $urut, $tahun, $printSkData['original']['message']);
-
-                        return response()->json([
-                            'code' => 500,
-                            'status' => 'error',
-                            'message' => 'Data SK gagal ditandatangani secara digital. ' . $printSkData['original']['message']
-                        ], 500);
-                    }
-                } else {
-                    // Multiple employees but small batch - use mini batch processing
+                // call printSk function
+                $printSkResponse = $this->printSk($urut, $tahun, $kd_karyawan[0], $passphrase);
+                $printSkData = json_decode($printSkResponse->getContent(), true);
+                
+                if ($printSkData['original']['code'] == 200) {
                     return response()->json([
                         'code' => 200,
-                        'status' => 'success', 
-                        'message' => 'Sistem secara otomatis menggunakan batch processing untuk multiple karyawan.',
-                        'redirect_to_batch' => true,
-                        'batch_size' => count($kd_karyawan)
+                        'status' => 'success',
+                        'message' => 'Data SK berhasil ditanadatangani secara digital.',
                     ]);
+                } else {
+                    $this->failedVerification($kd_karyawan, $urut, $tahun, $printSkData['original']['message']);
+
+                    return response()->json([
+                        'code' => 500,
+                        'status' => 'error',
+                        'message' => 'Data SK gagal ditanda tangani secara digital.' . $printSkData['original']['message'],
+                    ], 500);
                 }
+
             } else {
-                $this->failedVerification($kd_karyawan, $urut, $tahun, 'Data SK gagal ditandatangani secara digital.');
+                $this->failedVerification($kd_karyawan, $urut, $tahun, 'Data SK gagal ditanadatangani secara digital.');
 
                 return response()->json([
                     'code' => 500,
                     'status' => 'error',
-                    'message' => 'Data SK gagal ditandatangani secara digital.'
+                    'message' => 'Data SK gagal ditanadatangani secara digital.'
                 ], 500);
             }
         } catch (\Exception $e) {
@@ -978,7 +952,7 @@ class SKController extends Controller
         Log::info('Data untuk PDF', ['data' => $data]);
         
         
-        // Use LaravelMpdf dengan konfigurasi optimized untuk HTML besar
+        // Use LaravelMpdf yang tersedia di sistem
         $pdf = PDF::loadView('sk.sk-pegawai-kontrak', $data, [], [
             'format' => [215, 330], // ukuran kertas 21,5 x 33 cm
             'orientation' => 'P',
@@ -998,29 +972,8 @@ class SKController extends Controller
                     'I' => 'Bookman Old Style Italic.ttf',
                     'BI' => 'Bookman Old Style Bold Italic.ttf'
                 ]
-            ],
-            // Konfigurasi untuk mengatasi HTML size limit
-            'mode' => 'utf-8',
-            'tempDir' => storage_path('app/temp'),
-            // Increase limits untuk HTML processing
-            'max_execution_time' => 300, // 5 menit
-            'autoScriptToLang' => true,
-            'autoLangToFont' => true,
-            'ignore_invalid_utf8' => true,
-            'allow_charset_conversion' => true
+            ]
         ]);
-
-        // Set watermark untuk draft - hanya gunakan method yang tersedia
-        try {
-            $mpdf = $pdf->getMpdf();
-            $mpdf->SetWatermarkText('DRAFT');
-            // Untuk force show watermark, kita perlu cara alternatif
-            if (property_exists($mpdf, 'showWatermarkText')) {
-                $mpdf->showWatermarkText = true;
-            }
-        } catch (\Exception $e) {
-            Log::warning('Watermark setup failed: ' . $e->getMessage());
-        }
 
         // Simpan PDF ke disk hrd_files
         $pdfOutput = $pdf->output();
@@ -1851,525 +1804,6 @@ class SKController extends Controller
                 'code' => 500,
                 'status' => 'error',
                 'message' => 'Error saat cleanup: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Finalisasi batch processing untuk SK kolektif
-     */
-    public function finalisasiBatch(Request $request)
-    {
-        // Validasi input
-        $validator = Validator::make($request->all(), [
-            'tanggal' => 'required|date',
-            'passphrase' => 'required|string|min:1',
-            'urut_rincian_verif' => 'required',
-            'tahun_rincian_verif' => 'required',
-            'kd_karyawan' => 'required|array|min:1'
-        ], [
-            'tanggal.required' => 'Tanggal tanda tangan SK wajib diisi',
-            'tanggal.date' => 'Format tanggal tidak valid',
-            'passphrase.required' => 'Passphrase (Password TTE) wajib diisi',
-            'passphrase.min' => 'Passphrase tidak boleh kosong',
-            'urut_rincian_verif.required' => 'Data urut tidak valid',
-            'tahun_rincian_verif.required' => 'Data tahun tidak valid',
-            'kd_karyawan.required' => 'Data karyawan tidak valid',
-            'kd_karyawan.min' => 'Minimal harus ada satu karyawan yang dipilih'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'code' => 422,
-                'status' => 'error',
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $urut = $request->urut_rincian_verif;
-        $tahun = $request->tahun_rincian_verif;
-        $kdKaryawanList = $request->kd_karyawan;
-        $tglTtd = $request->tanggal;
-        $passphrase = $request->passphrase;
-
-        try {
-            // Encrypt passphrase untuk keamanan
-            $encryptedPassphrase = encrypt($passphrase);
-
-            // Get karyawan details
-            $karyawanDetails = DB::table('hrd_sk_pegawai_kontrak as sk')
-                ->join('view_tampil_karyawan as vk', 'sk.kd_karyawan', '=', 'vk.kd_karyawan')
-                ->select('sk.kd_karyawan', 'vk.nama', 'vk.gelar_depan', 'vk.gelar_belakang')
-                ->where('sk.urut', $urut)
-                ->where('sk.tahun_sk', $tahun)
-                ->whereIn('sk.kd_karyawan', $kdKaryawanList)
-                ->get()
-                ->map(function($item) {
-                    return [
-                        'kd_karyawan' => $item->kd_karyawan,
-                        'nama' => trim("{$item->gelar_depan} {$item->nama} {$item->gelar_belakang}")
-                    ];
-                })
-                ->toArray();
-
-            if (empty($karyawanDetails)) {
-                return response()->json([
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Data karyawan tidak ditemukan'
-                ], 404);
-            }
-
-            // Generate nomor SK untuk batch ini
-            $getMaxNoSk = DB::table('hrd_sk_pegawai_kontrak')
-                ->where('tahun_sk', $tahun)
-                ->max('no_sk');
-            $newNoSk = sprintf('%02s', ($getMaxNoSk ?? 0) + 1);
-
-            // Update nomor SK untuk semua karyawan dalam batch
-            DB::table('hrd_sk_pegawai_kontrak')
-                ->where('urut', $urut)
-                ->where('tahun_sk', $tahun)
-                ->whereIn('kd_karyawan', $kdKaryawanList)
-                ->update([
-                    'no_sk' => $newNoSk,
-                    'tgl_ttd' => $tglTtd
-                ]);
-
-            // Create batch record di MySQL queue database
-            $batchId = DB::connection('mysql_queue')->table('sk_batch_process')->insertGetId([
-                'urut' => $urut,
-                'tahun_sk' => $tahun,
-                'total_karyawan' => count($karyawanDetails),
-                'status' => 'pending',
-                'passphrase_encrypted' => $encryptedPassphrase,
-                'tgl_ttd' => $tglTtd,
-                'created_by' => auth()->user()->kd_karyawan,
-                'estimated_completion' => now()->addMinutes(count($karyawanDetails) * 0.5), // Estimasi 30 detik per karyawan
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            // Create progress records untuk setiap karyawan
-            $progressData = [];
-            foreach ($karyawanDetails as $karyawan) {
-                $progressData[] = [
-                    'batch_id' => $batchId,
-                    'kd_karyawan' => $karyawan['kd_karyawan'],
-                    'karyawan_name' => $karyawan['nama'],
-                    'status' => 'pending',
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-            }
-            
-            DB::connection('mysql_queue')->table('sk_tte_progress')->insert($progressData);
-
-            // Dispatch queue job dengan chunking untuk menghindari overload
-            $chunkSize = 20; // Process 20 karyawan per job
-            $karyawanChunks = array_chunk($karyawanDetails, $chunkSize);
-            
-            foreach ($karyawanChunks as $index => $chunk) {
-                ProcessTteSkBatchJob::dispatch($batchId, $chunk, $passphrase, $tglTtd)
-                    ->delay(now()->addSeconds($index * 30)) // Delay antar chunk 30 detik
-                    ->onConnection('database_mysql')
-                    ->onQueue('sk_tte');
-            }
-
-            return response()->json([
-                'code' => 200,
-                'status' => 'success',
-                'message' => 'Proses TTE batch dimulai. Anda akan menerima notifikasi saat selesai.',
-                'batch_id' => $batchId,
-                'total_karyawan' => count($karyawanDetails),
-                'estimated_completion' => now()->addMinutes(count($karyawanDetails) * 0.5)->format('H:i:s')
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error in finalisasiBatch method:', ['exception' => $e]);
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan saat memulai proses batch: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get batch processing status
-     */
-    public function getBatchStatus($batchId)
-    {
-        try {
-            $batch = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('id', $batchId)
-                ->first();
-
-            if (!$batch) {
-                return response()->json([
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Batch tidak ditemukan'
-                ], 404);
-            }
-
-            $percentage = $batch->total_karyawan > 0 
-                ? round(($batch->processed_count / $batch->total_karyawan) * 100, 2)
-                : 0;
-
-            // Calculate ETA
-            $eta = null;
-            if ($batch->status == 'processing' && $batch->processed_count > 0) {
-                $timeElapsed = now()->diffInSeconds($batch->started_at);
-                $avgTimePerKaryawan = $timeElapsed / $batch->processed_count;
-                $remainingKaryawan = $batch->total_karyawan - $batch->processed_count;
-                $eta = now()->addSeconds($remainingKaryawan * $avgTimePerKaryawan)->format('H:i:s');
-            }
-
-            return response()->json([
-                'code' => 200,
-                'status' => $batch->status,
-                'total' => $batch->total_karyawan,
-                'processed' => $batch->processed_count,
-                'success' => $batch->success_count,
-                'failed' => $batch->failed_count,
-                'percentage' => $percentage,
-                'current_processing' => $batch->current_karyawan_name ?? null,
-                'estimated_completion' => $eta,
-                'started_at' => $batch->started_at ? Carbon::parse($batch->started_at)->format('H:i:s') : null,
-                'completed_at' => $batch->completed_at ? Carbon::parse($batch->completed_at)->format('H:i:s') : null
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error getting batch status: ' . $e->getMessage());
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error saat mengambil status batch'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get batch detail progress
-     */
-    public function getBatchDetail($batchId)
-    {
-        try {
-            $batch = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('id', $batchId)
-                ->first();
-
-            if (!$batch) {
-                return response()->json([
-                    'code' => 404,
-                    'status' => 'error', 
-                    'message' => 'Batch tidak ditemukan'
-                ], 404);
-            }
-
-            $progressDetails = DB::connection('mysql_queue')
-                ->table('sk_tte_progress')
-                ->where('batch_id', $batchId)
-                ->orderBy('status', 'desc') // success first, then processing, then failed, then pending
-                ->orderBy('kd_karyawan')
-                ->get();
-
-            return response()->json([
-                'code' => 200,
-                'batch' => $batch,
-                'progress_details' => $progressDetails
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error getting batch detail: ' . $e->getMessage());
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error saat mengambil detail batch'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all active batches
-     */
-    public function getActiveBatches()
-    {
-        try {
-            $batches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->whereIn('status', ['pending', 'processing'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            return response()->json([
-                'code' => 200,
-                'batches' => $batches
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error getting active batches: ' . $e->getMessage());
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error saat mengambil data batch aktif'
-            ], 500);
-        }
-    }
-
-    /**
-     * Retry failed items in batch
-     */
-    public function retryFailedBatch(Request $request, $batchId)
-    {
-        try {
-            $batch = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('id', $batchId)
-                ->first();
-
-            if (!$batch) {
-                return response()->json([
-                    'code' => 404,
-                    'status' => 'error',
-                    'message' => 'Batch tidak ditemukan'
-                ], 404);
-            }
-
-            // Get failed items
-            $failedItems = DB::connection('mysql_queue')
-                ->table('sk_tte_progress')
-                ->where('batch_id', $batchId)
-                ->where('status', 'failed')
-                ->get()
-                ->map(function($item) {
-                    return [
-                        'kd_karyawan' => $item->kd_karyawan,
-                        'nama' => $item->karyawan_name
-                    ];
-                })
-                ->toArray();
-
-            if (empty($failedItems)) {
-                return response()->json([
-                    'code' => 400,
-                    'status' => 'error',
-                    'message' => 'Tidak ada item yang gagal untuk di-retry'
-                ], 400);
-            }
-
-            // Reset failed items to pending
-            DB::connection('mysql_queue')
-                ->table('sk_tte_progress')
-                ->where('batch_id', $batchId)
-                ->where('status', 'failed')
-                ->update([
-                    'status' => 'pending',
-                    'error_message' => null,
-                    'updated_at' => now()
-                ]);
-
-            // Update batch status
-            DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('id', $batchId)
-                ->update([
-                    'status' => 'processing',
-                    'failed_count' => 0,
-                    'processed_count' => $batch->processed_count - count($failedItems),
-                    'updated_at' => now()
-                ]);
-
-            // Dispatch new job for failed items
-            $passphrase = $request->passphrase ?? decrypt($batch->passphrase_encrypted);
-            
-            ProcessTteSkBatchJob::dispatch($batchId, $failedItems, $passphrase, $batch->tgl_ttd)
-                ->onConnection('database_mysql')
-                ->onQueue('sk_tte');
-
-            return response()->json([
-                'code' => 200,
-                'status' => 'success',
-                'message' => 'Retry dimulai untuk ' . count($failedItems) . ' karyawan yang gagal'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error retrying failed batch: ' . $e->getMessage());
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error saat retry batch yang gagal'
-            ], 500);
-        }
-    }
-
-    /**
-     * Show batch progress modal
-     */
-    public function batchProgressModal(Request $request)
-    {
-        $batchId = $request->get('batch_id');
-        $totalKaryawan = $request->get('total_karyawan');
-        $estimatedCompletion = $request->get('estimated_completion');
-
-        return view('sk.batch-progress-modal', compact('batchId', 'totalKaryawan', 'estimatedCompletion'));
-    }
-
-    /**
-     * Show batch monitor page
-     */
-    public function batchMonitor()
-    {
-        return view('sk.batch-monitor');
-    }
-
-    /**
-     * Get batch list for monitoring
-     */
-    public function getBatchList()
-    {
-        try {
-            $batches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->orderBy('created_at', 'desc')
-                ->limit(50)
-                ->get();
-
-            return response()->json([
-                'code' => 200,
-                'status' => 'success',
-                'batches' => $batches
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error getting batch list:', ['exception' => $e]);
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error retrieving batch list'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get queue statistics
-     */
-    public function getQueueStats()
-    {
-        try {
-            // Batch statistics
-            $totalBatches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->count();
-
-            $processingBatches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('status', 'processing')
-                ->count();
-
-            $completedBatches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('status', 'completed')
-                ->count();
-
-            $failedBatches = DB::connection('mysql_queue')
-                ->table('sk_batch_process')
-                ->where('status', 'failed')
-                ->count();
-
-            // Queue jobs statistics
-            $pendingJobs = DB::connection('mysql_queue')
-                ->table('jobs')
-                ->count();
-
-            $skTteQueue = DB::connection('mysql_queue')
-                ->table('jobs')
-                ->where('queue', 'sk_tte')
-                ->count();
-
-            $defaultQueue = DB::connection('mysql_queue')
-                ->table('jobs')
-                ->where('queue', 'default')
-                ->count();
-
-            $failedJobs = DB::connection('mysql_queue')
-                ->table('failed_jobs')
-                ->count();
-
-            return response()->json([
-                'code' => 200,
-                'status' => 'success',
-                'stats' => [
-                    'total_batches' => $totalBatches,
-                    'processing_batches' => $processingBatches,
-                    'completed_batches' => $completedBatches,
-                    'failed_batches' => $failedBatches,
-                    'pending_jobs' => $pendingJobs,
-                    'sk_tte_queue' => $skTteQueue,
-                    'default_queue' => $defaultQueue,
-                    'failed_jobs' => $failedJobs
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error getting queue stats:', ['exception' => $e]);
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error retrieving queue statistics'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get worker status
-     */
-    public function getWorkerStatus()
-    {
-        try {
-            // Check if worker is running by looking at recent job activity
-            $recentJob = DB::connection('mysql_queue')
-                ->table('jobs')
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            $lastProcessed = null;
-            if ($recentJob) {
-                $lastProcessed = \Carbon\Carbon::parse($recentJob->created_at)->diffForHumans();
-            }
-
-            // Simple check - if there are pending jobs and no recent activity, worker might not be running
-            $pendingJobs = DB::connection('mysql_queue')->table('jobs')->count();
-            $workerRunning = true; // Assume running if no jobs in queue
-            
-            if ($pendingJobs > 0) {
-                // If there are pending jobs but no recent activity (last 5 minutes), worker might be down
-                $recentActivity = DB::connection('mysql_queue')
-                    ->table('jobs')
-                    ->where('created_at', '>', \Carbon\Carbon::now()->subMinutes(5))
-                    ->count();
-                
-                $workerRunning = $recentActivity > 0;
-            }
-
-            return response()->json([
-                'code' => 200,
-                'status' => 'success',
-                'worker_running' => $workerRunning,
-                'last_processed' => $lastProcessed,
-                'queue_size' => $pendingJobs
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error checking worker status:', ['exception' => $e]);
-            return response()->json([
-                'code' => 500,
-                'status' => 'error',
-                'message' => 'Error checking worker status'
             ], 500);
         }
     }
