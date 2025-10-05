@@ -108,7 +108,7 @@ Route::get('/composer-dump-autoload', function () {
     return 'Composer dump autoload';
 });
 
-Auth::loginUsingId('1629');
+// Auth::loginUsingId('1629');
 // Auth::loginUsingId('120');
 
 // Route::get('/migrate-users', MigrateUserController::class);
@@ -145,6 +145,13 @@ Route::get('/sign-pdf', [BsreController::class, 'signPdf'])->name('sign-pdf');
 // logout
 Route::post('/logout', LogoutController::class)->name('logout');
 
+// Role Selector (requires authentication)
+Route::middleware('auth')->group(function () {
+    Route::get('/role-selector', [App\Http\Controllers\Auth\RoleSelectorController::class, 'index'])->name('role-selector.index');
+    Route::post('/role-selector/select', [App\Http\Controllers\Auth\RoleSelectorController::class, 'selectRole'])->name('role-selector.select');
+    Route::post('/role-selector/switch', [App\Http\Controllers\Auth\RoleSelectorController::class, 'switchRole'])->name('role-selector.switch');
+});
+
 // Route untuk mengakses foto dari disk hrd_files
 Route::get('/photo/{type}/{id}/{filename}', [KaryawanController::class, 'showPhoto'])
     ->name('photo.show')
@@ -155,7 +162,7 @@ Route::get('/sk-document/{year}/{filename}', [SKController::class, 'showSkDocume
     ->name('sk.document.show')
     ->middleware('auth');
 
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verify.active.role'])->prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['permission:hrd_view_dashboard'])
         ->name('dashboard.')
         ->group(function () {
@@ -225,10 +232,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->group(function () {
         Route::name('roles.')->group(function () {
             Route::get('/user-management/roles', [RoleController::class, 'index'])->name('index');
+            Route::get('/user-management/roles/create', [RoleController::class, 'create'])->name('create');
             Route::post('/user-management/roles/store', [RoleController::class, 'store'])->name('store');
             Route::get('/user-management/roles/show/{id}', [RoleController::class, 'show'])->name('show');
             Route::get('/user-management/roles/edit/{id}', [RoleController::class, 'edit'])->name('edit');
             Route::put('/user-management/roles/update/{id}', [RoleController::class, 'update'])->name('update');
+            
+            // Edit permissions routes
+            Route::get('/user-management/roles/{id}/edit-permissions', [RoleController::class, 'editPermissions'])->name('edit-permissions');
+            Route::put('/user-management/roles/{id}/update-permissions', [RoleController::class, 'updatePermissions'])->name('update-permissions');
         });
 
         Route::name('permissions.')->group(function () {
@@ -395,18 +407,23 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/karyawan/store', [KaryawanController::class, 'store'])->name('store');
         Route::get('/karyawan/show/{id}', [KaryawanController::class, 'show'])->name('show');
         Route::get('karyawan/jurusan/{id}', [KaryawanController::class, 'getJurusan'])->name('jurusan');
-        Route::get('karyawan/edit/{id}', [KaryawanController::class, 'edit'])->name('edit');
-        Route::patch('karyawan/update/{id}', [KaryawanController::class, 'update'])->name('update');
+        
+        // Edit routes dengan permission khusus
+        Route::middleware(['permission:hrd_edit_karyawan'])->group(function () {
+            Route::get('karyawan/edit/{id}', [KaryawanController::class, 'edit'])->name('edit');
+            Route::patch('karyawan/update/{id}', [KaryawanController::class, 'update'])->name('update');
+        });
 
         // printIdCard
         Route::get('karyawan/identitas/print-id-card/{id}', [KaryawanController::class, 'printIdCard'])->name('print-id-card');
         Route::post('karyawan/generate-print-token', [KaryawanController::class, 'generatePrintToken'])->name('generate-print-token');
         Route::post('karyawan/upload-photo/{id}', [KaryawanController::class, 'uploadPhoto'])->name('upload-photo');
 
-        // cv karyawan/identitas/cv/{id}
-        Route::get('karyawan/identitas/cv/{id}', [CvController::class, 'show'])->name('cv');
-        // print cv
-        Route::get('karyawan/identitas/print-cv/{id}', [CvController::class, 'print'])->name('print-cv');
+        // CV routes dengan permission khusus
+        Route::middleware(['permission:hrd_view_karyawan_cv'])->group(function () {
+            Route::get('karyawan/identitas/cv/{id}', [CvController::class, 'show'])->name('cv');
+            Route::get('karyawan/identitas/print-cv/{id}', [CvController::class, 'print'])->name('print-cv');
+        });
 
         // STR
         Route::get('karyawan/str/{id}', [SuratTandaRegistrasiController::class, 'index'])->name('str.index');
@@ -428,14 +445,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('karyawan/sip/download/{id}/{urut}', [SuratIzinPraktikController::class, 'downloadFile'])->name('sip.download');
         Route::delete('karyawan/sip/delete/{id}/{urut}', [SuratIzinPraktikController::class, 'destroy'])->name('sip.destroy');
 
-        // Riwayat Pendidikan
-        Route::group(['prefix' => 'karyawan/pendidikan', 'as' => 'pendidikan.'], function () {
-            Route::get('/{id}', [RiwayatPendidikanController::class, 'index'])->name('index');
-            Route::get('/get-pendidikan-data/{id}', [RiwayatPendidikanController::class, 'getPendidikanData'])->name('get-pendidikan-data');
-            Route::post('/store/{id}', [RiwayatPendidikanController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [RiwayatPendidikanController::class, 'edit'])->name('edit');
-            Route::patch('/update/{id}/{urut}', [RiwayatPendidikanController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [RiwayatPendidikanController::class, 'destroy'])->name('destroy');
+        // Riwayat routes dengan permission khusus
+        Route::middleware(['permission:hrd_view_karyawan_riwayat'])->group(function () {
+            // Riwayat Pendidikan
+            Route::group(['prefix' => 'karyawan/pendidikan', 'as' => 'pendidikan.'], function () {
+                Route::get('/{id}', [RiwayatPendidikanController::class, 'index'])->name('index');
+                Route::get('/get-pendidikan-data/{id}', [RiwayatPendidikanController::class, 'getPendidikanData'])->name('get-pendidikan-data');
+                Route::post('/store/{id}', [RiwayatPendidikanController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [RiwayatPendidikanController::class, 'edit'])->name('edit');
+                Route::patch('/update/{id}/{urut}', [RiwayatPendidikanController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [RiwayatPendidikanController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // BPJS Ketenagakerjaan
@@ -473,62 +493,64 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/print', [KaryawanSuratIzinController::class, 'print'])->name('print');
         });
 
-        // Riwayat Kerja
-        Route::group(['prefix' => 'karyawan/riwayat-kerja', 'as' => 'riwayat-kerja.'], function () {
-            Route::get('/{id}', [RiwayatKerjaController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [RiwayatKerjaController::class, 'getRiwayatKerjaData'])->name('get-data');
-            Route::post('/store/{id}', [RiwayatKerjaController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [RiwayatKerjaController::class, 'edit'])->name('edit');
-            Route::patch('/update/{id}/{urut}', [RiwayatKerjaController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [RiwayatKerjaController::class, 'destroy'])->name('destroy');
-            // download file
-            Route::get('/download/{id}/{urut}', [RiwayatKerjaController::class, 'downloadFile'])->name('download');
-        });
+        Route::middleware(['permission:hrd_view_karyawan_riwayat'])->group(function () {
+            // Riwayat Kerja
+            Route::group(['prefix' => 'karyawan/riwayat-kerja', 'as' => 'riwayat-kerja.'], function () {
+                Route::get('/{id}', [RiwayatKerjaController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [RiwayatKerjaController::class, 'getRiwayatKerjaData'])->name('get-data');
+                Route::post('/store/{id}', [RiwayatKerjaController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [RiwayatKerjaController::class, 'edit'])->name('edit');
+                Route::patch('/update/{id}/{urut}', [RiwayatKerjaController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [RiwayatKerjaController::class, 'destroy'])->name('destroy');
+                // download file
+                Route::get('/download/{id}/{urut}', [RiwayatKerjaController::class, 'downloadFile'])->name('download');
+            });
 
-        // Riwayat Organisasi
-        Route::group(['prefix' => 'karyawan/riwayat-organisasi', 'as' => 'riwayat-organisasi.'], function () {
-            Route::get('/{id}', [RiwayatOrganisasiController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [RiwayatOrganisasiController::class, 'getRiwayatOrganisasiData'])->name('get-data');
-            Route::post('/store/{id}', [RiwayatOrganisasiController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [RiwayatOrganisasiController::class, 'edit'])->name('edit');
-            Route::patch('/update/{id}/{urut}', [RiwayatOrganisasiController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [RiwayatOrganisasiController::class, 'destroy'])->name('destroy');
-        });
+            // Riwayat Organisasi
+            Route::group(['prefix' => 'karyawan/riwayat-organisasi', 'as' => 'riwayat-organisasi.'], function () {
+                Route::get('/{id}', [RiwayatOrganisasiController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [RiwayatOrganisasiController::class, 'getRiwayatOrganisasiData'])->name('get-data');
+                Route::post('/store/{id}', [RiwayatOrganisasiController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [RiwayatOrganisasiController::class, 'edit'])->name('edit');
+                Route::patch('/update/{id}/{urut}', [RiwayatOrganisasiController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [RiwayatOrganisasiController::class, 'destroy'])->name('destroy');
+            });
 
-        // Penghargaan
-        Route::group(['prefix' => 'karyawan/penghargaan', 'as' => 'penghargaan.'], function () {
-            Route::get('/{id}', [PenghargaanController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [PenghargaanController::class, 'getPenghargaanData'])->name('data');
-            Route::post('/store/{id}', [PenghargaanController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [PenghargaanController::class, 'edit'])->name('edit');
-            Route::put('/update/{id}/{urut}', [PenghargaanController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [PenghargaanController::class, 'destroy'])->name('destroy');
-        });
+            // Penghargaan
+            Route::group(['prefix' => 'karyawan/penghargaan', 'as' => 'penghargaan.'], function () {
+                Route::get('/{id}', [PenghargaanController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [PenghargaanController::class, 'getPenghargaanData'])->name('data');
+                Route::post('/store/{id}', [PenghargaanController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [PenghargaanController::class, 'edit'])->name('edit');
+                Route::put('/update/{id}/{urut}', [PenghargaanController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [PenghargaanController::class, 'destroy'])->name('destroy');
+            });
 
-        // Seminar
-        Route::group(['prefix' => 'karyawan/seminar', 'as' => 'seminar.'], function () {
-            Route::get('/{id}', [SeminarController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [SeminarController::class, 'getSeminarData'])->name('data');
-            Route::post('/store/{id}', [SeminarController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [SeminarController::class, 'edit'])->name('edit');
-            Route::put('/update/{id}/{urut}', [SeminarController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [SeminarController::class, 'destroy'])->name('destroy');
-        });
+            // Seminar
+            Route::group(['prefix' => 'karyawan/seminar', 'as' => 'seminar.'], function () {
+                Route::get('/{id}', [SeminarController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [SeminarController::class, 'getSeminarData'])->name('data');
+                Route::post('/store/{id}', [SeminarController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [SeminarController::class, 'edit'])->name('edit');
+                Route::put('/update/{id}/{urut}', [SeminarController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [SeminarController::class, 'destroy'])->name('destroy');
+            });
 
-        // Tugas (Read-only)
-        Route::group(['prefix' => 'karyawan/tugas', 'as' => 'tugas.'], function () {
-            Route::get('/{id}', [TugasController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [TugasController::class, 'getTugasData'])->name('data');
-        });
+            // Tugas (Read-only)
+            Route::group(['prefix' => 'karyawan/tugas', 'as' => 'tugas.'], function () {
+                Route::get('/{id}', [TugasController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [TugasController::class, 'getTugasData'])->name('data');
+            });
 
-        // Cuti
-        Route::group(['prefix' => 'karyawan/cuti', 'as' => 'cuti.'], function () {
-            Route::get('/{id}', [CutiController::class, 'index'])->name('index');
-            Route::get('/get-data/{id}', [CutiController::class, 'getCutiData'])->name('data');
-            Route::post('/store/{id}', [CutiController::class, 'store'])->name('store');
-            Route::get('/edit/{id}/{urut}', [CutiController::class, 'edit'])->name('edit');
-            Route::put('/update/{id}/{urut}', [CutiController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}/{urut}', [CutiController::class, 'destroy'])->name('destroy');
+            // Cuti
+            Route::group(['prefix' => 'karyawan/cuti', 'as' => 'cuti.'], function () {
+                Route::get('/{id}', [CutiController::class, 'index'])->name('index');
+                Route::get('/get-data/{id}', [CutiController::class, 'getCutiData'])->name('data');
+                Route::post('/store/{id}', [CutiController::class, 'store'])->name('store');
+                Route::get('/edit/{id}/{urut}', [CutiController::class, 'edit'])->name('edit');
+                Route::put('/update/{id}/{urut}', [CutiController::class, 'update'])->name('update');
+                Route::delete('/delete/{id}/{urut}', [CutiController::class, 'destroy'])->name('destroy');
+            });
         });
     });
 
@@ -574,6 +596,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/sk-kontrak/third-verification', [SKController::class, 'thirdVerification'])->name('third-verification');
         Route::post('/sk-kontrak/fourth-verification', [SKController::class, 'fourthVerification'])->name('fourth-verification');
         Route::post('/sk-kontrak/finalisasi', [SKController::class, 'finalisasi'])->name('finalisasi');
+        Route::post('/sk-kontrak/finalisasi-batch', [SKController::class, 'finalisasiBatch'])->name('finalisasi-batch');
+        Route::get('/sk-kontrak/batch-status/{batchId}', [SKController::class, 'getBatchStatus'])->name('batch-status');
+        Route::get('/sk-kontrak/batch-detail/{batchId}', [SKController::class, 'getBatchDetail'])->name('batch-detail');
+        Route::get('/sk-kontrak/batch-progress-modal', [SKController::class, 'batchProgressModal'])->name('batch-progress-modal');
+        Route::get('/sk-kontrak/batch-monitor', [SKController::class, 'batchMonitor'])->name('batch-monitor');
+        Route::get('/sk-kontrak/batch-list', [SKController::class, 'getBatchList'])->name('batch-list');
+        Route::get('/sk-kontrak/queue-stats', [SKController::class, 'getQueueStats'])->name('queue-stats');
+        Route::get('/sk-kontrak/worker-status', [SKController::class, 'getWorkerStatus'])->name('worker-status');
+        Route::get('/sk-kontrak/active-batches', [SKController::class, 'getActiveBatches'])->name('active-batches');
+        Route::post('/sk-kontrak/retry-failed-batch/{batchId}', [SKController::class, 'retryFailedBatch'])->name('retry-failed-batch');
         Route::get('/sk-kontrak/get-karyawan', [SKController::class, 'getKaryawan'])->name('get-karyawan');
         Route::get('/sk-kontrak/rincian-karyawan', [SKController::class, 'rincianKaryawan'])->name('rincian-karyawan');
         Route::get('/sk-kontrak/verifikasi-karyawan', [SKController::class, 'verifikasiKaryawan'])->name('verifikasi-karyawan');
@@ -621,6 +653,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         
         // Route untuk download dokumen mutasi yang sudah ditandatangani
         Route::get('/mutasi-on-process/download-document/{id_dokumen}', [MutasiOnProcessController::class, 'downloadMutasiDocument'])->name('download-document');
+        
+        // Route untuk download dokumen mutasi berdasarkan path (lebih reliable)
+        Route::get('/mutasi-on-process/download-document-by-path/{kd_mutasi}/{kd_karyawan}', [MutasiOnProcessController::class, 'downloadMutasiDocumentByPath'])->name('download-document-by-path');
         
         // Route untuk cleanup file temporary mutasi (admin only)
         Route::delete('/mutasi-on-process/cleanup-temporary-files', [MutasiOnProcessController::class, 'cleanupMutasiTemporaryFiles'])->name('cleanup-temporary-files');
@@ -811,6 +846,19 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/check-data', [AbsensiController::class, 'checkData'])->name('check-data');
         });
     });
+
+    // Backup Management
+    Route::middleware(['permission:hrd_manage_backup'])
+        ->prefix('backup')
+        ->name('backup.')
+        ->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\BackupController::class, 'index'])->name('index');
+        Route::post('/perform', [App\Http\Controllers\Admin\BackupController::class, 'performBackup'])->name('perform');
+        Route::get('/status', [App\Http\Controllers\Admin\BackupController::class, 'getBackupStatus'])->name('status');
+        Route::get('/history', [App\Http\Controllers\Admin\BackupController::class, 'getBackupHistory'])->name('history');
+        Route::get('/data', [App\Http\Controllers\Admin\BackupController::class, 'getBackupData'])->name('data');
+        Route::get('/check', [App\Http\Controllers\Admin\BackupController::class, 'checkBackupExists'])->name('check');
+    });
 });
 
 // changePassword
@@ -821,12 +869,161 @@ Route::post('/change-password', [ChangeProfileController::class, 'changePassword
 
 // Route milik user
 // User routes dengan middleware auth dan role.redirect
-Route::middleware(['auth', 'role.redirect'])->prefix('user')->name('user.')->group(function () {
-    Route::name('dashboard.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'userDashboard'])->name('index');
+Route::middleware(['auth', 'verify.active.role', 'role.redirect'])->prefix('user')->name('user.')->group(function () {
+    // Dashboard
+    Route::middleware(['permission:hrd_view_user_dashboard'])
+        ->get('/dashboard', [App\Http\Controllers\Users\UserDashboardController::class, 'index'])
+        ->name('dashboard');
+    
+    // Profile Management
+    Route::middleware(['permission:hrd_view_own_profile'])
+        ->prefix('profil')->name('profil.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Users\UserProfilController::class, 'index'])->name('index');
+        
+        Route::middleware(['permission:hrd_edit_own_profile'])->group(function () {
+            Route::get('/edit', [App\Http\Controllers\Users\UserProfilController::class, 'edit'])->name('edit');
+            Route::put('/update', [App\Http\Controllers\Users\UserProfilController::class, 'update'])->name('update');
+        });
+        
+        Route::middleware(['permission:hrd_upload_own_photo'])
+            ->post('/upload-photo', [App\Http\Controllers\Users\UserProfilController::class, 'uploadPhoto'])
+            ->name('upload-photo');
+        
+        // Print CV
+        Route::middleware(['permission:hrd_view_own_profile'])
+            ->get('/print-cv', [App\Http\Controllers\Users\UserProfilController::class, 'printCv'])
+            ->name('print-cv');
+        
+        // API endpoints for cascading dropdowns
+        Route::get('/get-kabupaten', [App\Http\Controllers\Users\UserProfilController::class, 'getKabupaten'])->name('get-kabupaten');
+        Route::get('/get-kecamatan', [App\Http\Controllers\Users\UserProfilController::class, 'getKecamatan'])->name('get-kecamatan');
+        Route::get('/get-kelurahan', [App\Http\Controllers\Users\UserProfilController::class, 'getKelurahan'])->name('get-kelurahan');
     });
     
-    // Tambahkan route khusus user di sini
+    // Data Kepegawaian
+    Route::middleware(['permission:hrd_view_own_data'])
+        ->prefix('kepegawaian')->name('kepegawaian.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Users\UserKepegawaianController::class, 'index'])->name('index');
+        
+        // SK Kontrak
+        Route::middleware(['permission:user_manage_sk_kontrak'])
+            ->get('/sk-kontrak', [App\Http\Controllers\Users\UserKepegawaianController::class, 'riwayatSk'])
+            ->name('sk-kontrak');
+        
+        // Mutasi
+        Route::middleware(['permission:user_manage_mutasi'])
+            ->get('/mutasi', [App\Http\Controllers\Users\UserKepegawaianController::class, 'riwayatMutasi'])
+            ->name('mutasi');
+            
+        // Kenaikan Pangkat
+        Route::middleware(['permission:user_manage_kenaikan_pangkat'])
+            ->get('/kenaikan-pangkat', [App\Http\Controllers\Users\UserKepegawaianController::class, 'kenaikanPangkat'])
+            ->name('kenaikan-pangkat');
+            
+        // KGB
+        Route::middleware(['permission:user_manage_kgb'])
+            ->get('/kgb', [App\Http\Controllers\Users\UserKepegawaianController::class, 'kgb'])
+            ->name('kgb');
+        
+        // Riwayat SK
+        Route::middleware(['permission:hrd_view_own_sk'])->group(function () {
+            Route::get('/riwayat-sk', [App\Http\Controllers\Users\UserKepegawaianController::class, 'riwayatSk'])->name('riwayat-sk');
+            Route::get('/sk-detail/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'skDetail'])->name('sk-detail');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_sk'])
+            ->get('/download-sk/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'downloadSk'])
+            ->name('download-sk');
+        
+        // Riwayat Mutasi
+        Route::middleware(['permission:hrd_view_own_mutasi'])->group(function () {
+            Route::get('/riwayat-mutasi', [App\Http\Controllers\Users\UserKepegawaianController::class, 'riwayatMutasi'])->name('riwayat-mutasi');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_mutasi'])
+            ->get('/download-mutasi/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'downloadMutasi'])
+            ->name('download-mutasi');
+        
+        // Surat Izin
+        Route::middleware(['permission:hrd_view_own_izin'])->group(function () {
+            Route::get('/surat-izin', [App\Http\Controllers\Users\UserKepegawaianController::class, 'suratIzin'])->name('surat-izin');
+            Route::post('/surat-izin/store', [App\Http\Controllers\Users\UserKepegawaianController::class, 'storeSuratIzin'])->name('surat-izin.store');
+            Route::get('/surat-izin/{id}/edit', [App\Http\Controllers\Users\UserKepegawaianController::class, 'editSuratIzin'])->name('surat-izin.edit');
+            Route::put('/surat-izin/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'updateSuratIzin'])->name('surat-izin.update');
+            Route::delete('/surat-izin/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'destroySuratIzin'])->name('surat-izin.destroy');
+            Route::post('/surat-izin/get-kategori', [App\Http\Controllers\Users\UserKepegawaianController::class, 'getKategoriSuratIzin'])->name('surat-izin.get-kategori');
+            Route::post('/surat-izin/get-kategori-by-jenis', [App\Http\Controllers\Users\UserKepegawaianController::class, 'getKategoriIzin'])->name('surat-izin.get-kategori-by-jenis');
+            Route::get('/surat-izin/{id}/print', [App\Http\Controllers\Users\UserKepegawaianController::class, 'printSuratIzin'])->name('surat-izin.print');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_izin'])
+            ->get('/download-izin/{id}', [App\Http\Controllers\Users\UserKepegawaianController::class, 'downloadIzin'])
+            ->name('download-izin');
+    });
+    
+    // Sertifikasi & Pelatihan
+    Route::middleware(['permission:hrd_view_own_data'])
+        ->prefix('sertifikasi')->name('sertifikasi.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Users\UserSertifikasiController::class, 'index'])->name('index');
+        
+        // Menu STR
+        Route::middleware(['permission:user_manage_str'])
+            ->get('/str', [App\Http\Controllers\Users\UserSertifikasiController::class, 'str'])
+            ->name('str');
+            
+        // Menu SIP
+        Route::middleware(['permission:user_manage_sip'])
+            ->get('/sip', [App\Http\Controllers\Users\UserSertifikasiController::class, 'sip'])
+            ->name('sip');
+            
+        // Menu Seminar
+        Route::middleware(['permission:user_manage_seminar'])
+            ->get('/seminar', [App\Http\Controllers\Users\UserSertifikasiController::class, 'seminar'])
+            ->name('seminar');
+            
+        // Menu Penghargaan  
+        Route::middleware(['permission:user_manage_penghargaan'])
+            ->get('/penghargaan', [App\Http\Controllers\Users\UserSertifikasiController::class, 'penghargaan'])
+            ->name('penghargaan');
+        
+        // STR Management Detail
+        Route::middleware(['permission:hrd_view_own_str'])->group(function () {
+            Route::get('/str-detail/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'strDetail'])->name('str-detail');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_str'])
+            ->get('/download-str/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'downloadStr'])
+            ->name('download-str');
+        
+        // SIP Management Detail
+        Route::middleware(['permission:hrd_view_own_sip'])->group(function () {
+            Route::get('/sip-detail/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'sipDetail'])->name('sip-detail');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_sip'])
+            ->get('/download-sip/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'downloadSip'])
+            ->name('download-sip');
+        
+        // Seminar & Pelatihan
+        Route::middleware(['permission:hrd_view_own_sertifikat'])->group(function () {
+            Route::get('/seminar', [App\Http\Controllers\Users\UserSertifikasiController::class, 'seminar'])->name('seminar');
+            Route::get('/seminar-detail/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'seminarDetail'])->name('seminar-detail');
+        });
+        
+        Route::middleware(['permission:hrd_download_own_sertifikat'])
+            ->get('/download-sertifikat-seminar/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'downloadSertifikatSeminar'])
+            ->name('download-sertifikat-seminar');
+        
+        // Penghargaan
+        Route::middleware(['permission:hrd_view_own_sertifikat'])->group(function () {
+            Route::get('/penghargaan', [App\Http\Controllers\Users\UserSertifikasiController::class, 'penghargaan'])->name('penghargaan');
+            Route::get('/penghargaan-detail/{id}', [App\Http\Controllers\Users\UserSertifikasiController::class, 'penghargaanDetail'])->name('penghargaan-detail');
+        });
+    });
+});
+
+Route::name('dashboard.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'userDashboard'])->name('index');
 });
 
 
