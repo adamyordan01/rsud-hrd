@@ -138,11 +138,15 @@
                                     $filePathTte = $item->path_dokumen ?? '';
                                     
                                     // Gunakan route download yang aman untuk hrd_files disk
-                                    if ($item->id_dokumen) {
-                                        $urlFilePathtte = route('admin.mutasi-on-process.download-document', $item->id_dokumen);
+                                    if (!empty($item->path_dokumen)) {
+                                        // Gunakan method downloadMutasiDocumentByPath yang sudah ada di MutasiOnProcessController
+                                        $urlFilePathtte = route('admin.mutasi-on-process.download-document-by-path', [
+                                            'kd_mutasi' => $item->kd_mutasi, 
+                                            'kd_karyawan' => $item->kd_karyawan
+                                        ]);
                                     } else {
-                                        // Fallback untuk file lama yang masih di storage biasa
-                                        $urlFilePathtte = url(str_replace('public', 'public/storage', $filePathTte));
+                                        // Fallback untuk file lama yang belum ada path_dokumen
+                                        $urlFilePathtte = '';
                                     }
                                     
                                 @endphp
