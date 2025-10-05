@@ -20,32 +20,11 @@
                 class="app-sidebar-menu-primary menu menu-column menu-rounded menu-sub-indention menu-state-bullet-primary px-3 mb-5">
 
                 
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']) || Auth::user()->hasOnlyHrdRoles()))
+                @if (Auth::check() && Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']))
                     <div class="menu-item">
                         <a
                             class="menu-link @if (request()->routeIs('admin.dashboard.*')) active @endif"
                             href="{{ route('admin.dashboard.index') }}"
-                        >
-                            <span class="menu-icon">
-                                <i class="ki-duotone ki-element-11 fs-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                    <span class="path3"></span>
-                                    <span class="path4"></span>
-                                </i>
-                            </span>
-                            <span class="menu-title">Dashboard</span>
-                        </a>
-                    </div>
-                @endif
-
-                {{-- @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_pegawai_biasa']) || Auth::user()->roles->count() > 1)) --}}
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_pegawai_biasa'])))
-                    <!-- Dashboard menu untuk role pegawai_biasa -->
-                    <div class="menu-item">
-                        <a
-                            class="menu-link @if (request()->routeIs('user.dashboard.*')) active @endif"
-                            href="{{ route('user.dashboard.index') }}"
                         >
                             <span class="menu-icon">
                                 <i class="ki-duotone ki-element-11 fs-2">
@@ -246,7 +225,7 @@
                     <!--end:Menu sub-->
                 </div> --}}
 
-                @if (Auth::check() && (Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']) || Auth::user()->hasOnlyHrdRoles()))
+                @if (Auth::check() && Auth::user()->hasAnyRole(['hrd_struktural', 'hrd_it_member', 'hrd_it_head', 'hrd_kepegawaian', 'hrd_superadmin']))
                     <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.karyawan.*', 'admin.karyawan-luar.*', 'admin.karyawan-belum-lengkap.*', 'admin.pegawai-tidak-aktif.*') ? 'here show' : '' }}">
                         <span class="menu-link">
                             <span class="menu-icon">
@@ -784,7 +763,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Laravel Roles</span>
+                                            <span class="menu-title">Roles</span>
                                     </a>
                                 </div>
                             @endhasPermission
@@ -797,7 +776,7 @@
                                         <span class="menu-bullet">
                                             <span class="bullet bullet-dot"></span>
                                         </span>
-                                        <span class="menu-title">Laravel Permission</span>
+                                        <span class="menu-title">Permission</span>
                                 </a>
                             </div>
                             @endhasPermission
@@ -810,7 +789,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Laravel Users</span>
+                                            <span class="menu-title">Users</span>
                                     </a>
                                 </div>
                             @endhasPermission
