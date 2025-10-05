@@ -10,23 +10,9 @@
     $nama = $karyawan->nama;
     $nama_lengkap = $gelar_depan . $nama . $gelar_belakang;
 
-    $photoSmallUrl = '';
-    if ($karyawan->foto_small) {
-        // $photoSmallUrl = url(str_replace('public', 'public/storage', $karyawan->foto_small));
-        $photoSmallUrl = url(str_replace('public', 'storage', $karyawan->foto_small));
-    } elseif ($karyawan->foto && (Str::startsWith($karyawan->foto, 'rsud_') || $karyawan->foto === 'user.png')) {
-        $photoSmallUrl = 'https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $karyawan->foto;
-    } else {
-        // $photoSmallUrl = url(str_replace('public', 'public/storage', $karyawan->foto));
-        $photoSmallUrl = url(str_replace('public', 'storage', $karyawan->foto));
-    }
-
-    $photoUrl = '';
-    if ($karyawan->foto_square) {
-        $photoUrl = url(str_replace('public', 'public/storage', $karyawan->foto_square));
-    } elseif ($karyawan->foto && (Str::startsWith($karyawan->foto, 'rsud_') || $karyawan->foto === 'user.png')) {
-        $photoUrl = 'https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $karyawan->foto;
-    }
+    // Menggunakan PhotoHelper untuk konsistensi
+    $photoSmallUrl = PhotoHelper::getPhotoUrl($karyawan, 'foto_small');
+    $photoUrl = PhotoHelper::getPhotoUrl($karyawan, 'foto_square');
 @endphp
 
 @section('content')
