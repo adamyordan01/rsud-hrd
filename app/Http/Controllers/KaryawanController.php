@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\Karyawan;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
+use Intervention\Image\Facades\Image;
 
 class KaryawanController extends Controller
 {
@@ -106,12 +112,17 @@ class KaryawanController extends Controller
                 ->addColumn('id_pegawai', function ($row) {
                     $kd_karyawan = '<span class="fw-bold text-dark" style="font-size: 12px;">' . $row->kd_karyawan . '</span>';
                     
-                    $photo = $row->foto_square 
-                        ? '<div class="symbol symbol-45px"><img src="' . url(str_replace('public', 'storage', $row->foto_square)) . '" alt=""></div>'
-                        : ($row->foto && (Str::startsWith($row->foto, 'rsud_') || $row->foto === 'user.png') 
-                            ? '<div class="symbol symbol-45px"><img src="https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $row->foto . '" alt=""></div>'
-                            : '<div class="symbol symbol-45px"><img src="https://ui-avatars.com/api/?name=' . $row->nama . '&color=7F9CF5&background=EBF4FF" alt=""></div>'
-                        );
+                    // Prioritas foto_square dulu, jika tidak ada fallback ke foto lama, lalu ke avatar
+                    if ($row->foto_square) {
+                        $photoUrl = \App\Helpers\PhotoHelper::getPhotoUrl($row, 'foto_square');
+                        $photo = '<div class="symbol symbol-45px"><img src="' . $photoUrl . '" alt=""></div>';
+                    } elseif ($row->foto && Str::startsWith($row->foto, 'rsud_') && $row->foto !== 'user.png') {
+                        // Hanya tampilkan foto dari server lama jika bukan user.png
+                        $photo = '<div class="symbol symbol-45px"><img src="https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $row->foto . '" alt=""></div>';
+                    } else {
+                        // Gunakan blank.png dari domain lokal untuk user.png atau tidak ada foto
+                        $photo = '<div class="symbol symbol-45px"><img src="' . asset('assets/media/avatars/blank.png') . '" alt=""></div>';
+                    }
 
                     return $kd_karyawan . '<br>' . $photo;
                 })
@@ -587,7 +598,117 @@ class KaryawanController extends Controller
      */
     public function show(string $id)
     {
-        //
+        // Debug return to check if controller is called
+        // return response()->json(['debug' => 'Controller show method called', 'id' => $id]);
+        
+        // Force refresh cache jika ada parameter refresh
+        $forceRefresh = request()->has('refresh') || request()->has('_refresh');
+        $cacheKey = "karyawan_{$id}_profile";
+        
+        if ($forceRefresh) {
+            Cache::forget($cacheKey);
+        }
+        
+        $data = Cache::remember($cacheKey, 60 * 5, function () use ($id) {
+            $karyawan = Karyawan::where('kd_karyawan', $id)->firstOrFail();
+
+            // Daftar field wajib
+            $requiredFields = [
+                'nama', 'tempat_lahir', 'tgl_lahir', 'no_ktp', 'alamat', 'kd_propinsi', 
+                'kd_kabupaten', 'kd_kecamatan', 'kd_kelurahan', 'kd_jenis_kelamin', 
+                'kd_kulit', 'tinggi_badan', 'berat_badan', 'kode_gol_dar', 'kd_suku', 
+                'kd_agama', 'kd_bangsa', 'kd_status_nikah', 'no_akte', 'no_askes', 
+                'no_npwp', 'no_hp', 'kd_status_rmh', 'kd_status_kerja', 'email', 
+                'kd_pendidikan_terakhir', 'tahun_lulus', 'foto', 'no_kk', 
+                'nama_ibu_kandung', 'kd_jurusan', 'rek_bni_syariah'
+            ];
+
+            $pnsPppkFields = [
+                'nip_baru', 'no_karis', 'no_karpeg', 'no_taspen', 'tanggungan', 
+                'masa_kerja_thn', 'masa_kerja_bulan'
+            ];
+
+            // Label informatif untuk setiap field
+            $fieldLabels = [
+                'nama' => 'Nama Lengkap',
+                'tempat_lahir' => 'Tempat Lahir',
+                'tgl_lahir' => 'Tanggal Lahir',
+                'no_ktp' => 'Nomor KTP',
+                'alamat' => 'Alamat',
+                'kd_propinsi' => 'Provinsi',
+                'kd_kabupaten' => 'Kabupaten/Kota',
+                'kd_kecamatan' => 'Kecamatan',
+                'kd_kelurahan' => 'Kelurahan',
+                'kd_jenis_kelamin' => 'Jenis Kelamin',
+                'kd_kulit' => 'Warna Kulit',
+                'tinggi_badan' => 'Tinggi Badan',
+                'berat_badan' => 'Berat Badan',
+                'kode_gol_dar' => 'Golongan Darah',
+                'kd_suku' => 'Suku',
+                'kd_agama' => 'Agama',
+                'kd_bangsa' => 'Kebangsaan',
+                'kd_status_nikah' => 'Status Pernikahan',
+                'no_akte' => 'Nomor Akte Kelahiran',
+                'no_askes' => 'Nomor Askes',
+                'no_npwp' => 'Nomor NPWP',
+                'no_hp' => 'Nomor HP',
+                'kd_status_rmh' => 'Status Rumah',
+                'kd_status_kerja' => 'Status Kerja',
+                'email' => 'Email',
+                'kd_pendidikan_terakhir' => 'Pendidikan Terakhir',
+                'tahun_lulus' => 'Tahun Lulus',
+                'foto' => 'Foto Profil',
+                'no_kk' => 'Nomor Kartu Keluarga',
+                'nama_ibu_kandung' => 'Nama Ibu Kandung',
+                'kd_jurusan' => 'Jurusan Pendidikan',
+                'rek_bni_syariah' => 'Nomor Rekening BNI Syariah',
+                'nip_baru' => 'NIP Baru',
+                'no_karis' => 'Nomor Karis/Karsu',
+                'no_karpeg' => 'Nomor Karpeg',
+                'no_taspen' => 'Nomor Taspen',
+                'tanggungan' => 'Jumlah Tanggungan',
+                'masa_kerja_thn' => 'Masa Kerja (Tahun)',
+                'masa_kerja_bulan' => 'Masa Kerja (Bulan)'
+            ];
+
+            // Tentukan status kerja
+            $statusKerja = $karyawan->kd_status_kerja;
+            $isPnsOrPppk = in_array($statusKerja, [1, 7]);
+            $finalRequiredFields = $isPnsOrPppk ? array_merge($requiredFields, $pnsPppkFields) : $requiredFields;
+
+            // Hitung field terisi dan deteksi kosong
+            $filledFields = 0;
+            $missingFields = [];
+            foreach ($finalRequiredFields as $field) {
+                $value = $karyawan->$field;
+                if (!is_null($value) && $value !== '' && $value !== 0) {
+                    $filledFields++;
+                } else {
+                    $missingFields[] = $fieldLabels[$field] ?? str_replace('_', ' ', ucwords(strtolower($field)));
+                }
+            }
+
+            $totalRequiredFields = count($finalRequiredFields);
+            $persentase = $totalRequiredFields > 0 ? ($filledFields / $totalRequiredFields) * 100 : 0;
+
+            $namaLengkap = trim(($karyawan->gelar_depan ?? '') . ' ' . $karyawan->nama . ' ' . ($karyawan->gelar_belakang ?? ''));
+            $alamat = trim($karyawan->alamat . ', ' . $karyawan->kd_kelurahan . ', ' . $karyawan->kd_kecamatan . ', ' . $karyawan->kd_kabupaten . ', ' . $karyawan->kd_propinsi);
+            // dd($karyawan->kd_status_kerja);
+
+            $alasanList = DB::table('hrd_keterangan_nametag')->select('ID', 'KETERANGAN')->get();
+
+            return [
+                'karyawan' => $karyawan,
+                'nama_lengkap' => $namaLengkap,
+                'alamat' => $alamat,
+                'persentase_kelengkapan' => round($persentase, 0),
+                'missing_fields' => $missingFields,
+                'alasan_list' => $alasanList,
+                'carbon' => Carbon::class,
+            ];
+        });
+
+        return view('karyawan.show', $data);
     }
 
     /**
@@ -829,5 +950,202 @@ class KaryawanController extends Controller
             ->get();
 
         return response()->json($ruangans);
+    }
+
+    public function getJurusan($id)
+    {
+        $jurusan = DB::connection('sqlsrv')
+            ->table('hrd_jurusan')
+            ->select('kd_jurusan', 'jurusan', 'grup_jurusan')
+            ->where('grup_jurusan', $id)
+            ->orderBy('kd_jurusan', 'asc')
+            ->get();
+
+        return response()->json($jurusan);
+    }
+
+    public function uploadPhoto(Request $request, $id)
+    {
+        $karyawan = Karyawan::where('kd_karyawan', $id)->firstOrFail();
+
+        $validator = Validator::make($request->all(), [
+            'foto_square' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'foto_small' => 'nullable|image|mimes:png,jpeg,jpg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $uploadedPhotos = [];
+        $photoTypes = [
+            'foto_square' => ['width' => 400, 'height' => 400, 'format' => 'jpg'],
+            'foto' => ['width' => 300, 'height' => 400, 'format' => 'jpg'],
+            'foto_small' => ['width' => 200, 'height' => 267, 'format' => 'png'],
+        ];
+
+        foreach ($photoTypes as $type => $config) {
+            if ($request->hasFile($type)) {
+                try {
+                    $file = $request->file($type);
+                    
+                    // Generate nama file unik
+                    $fileName = $id . '_' . $type . '_' . time() . '.' . $config['format'];
+                    
+                    // Path untuk menyimpan di disk hrd_files
+                    $photoPath = 'photos/' . $fileName;
+                    
+                    // Proses dan resize gambar jika diperlukan
+                    $image = Image::make($file);
+                    
+                    // Resize sesuai konfigurasi
+                    $image->fit($config['width'], $config['height'], function ($constraint) {
+                        $constraint->upsize();
+                    });
+                    
+                    // Konversi format jika diperlukan
+                    if ($config['format'] === 'png') {
+                        $image->encode('png', 100);
+                    } else {
+                        $image->encode('jpg', 100);
+                    }
+                    
+                    // Simpan ke disk hrd_files
+                    Storage::disk('hrd_files')->put($photoPath, $image->stream());
+                    
+                    // Hapus foto lama jika ada
+                    if ($karyawan->{$type}) {
+                        Storage::disk('hrd_files')->delete($karyawan->{$type});
+                    }
+                    
+                    // Update database
+                    DB::table('hrd_karyawan')->where('kd_karyawan', $id)->update([
+                        $type => $photoPath
+                    ]);
+                    
+                    $uploadedPhotos[$type] = $photoPath;
+                    
+                } catch (\Exception $e) {
+                    Log::error("Error uploading {$type}: " . $e->getMessage());
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Gagal mengupload {$type}. Silakan coba lagi."
+                    ], 500);
+                }
+            }
+        }
+
+        // Hapus cache terlebih dahulu
+        Cache::forget("karyawan_{$id}_profile");
+        
+        // Refresh data karyawan setelah cache dihapus
+        $updatedKaryawan = Karyawan::where('kd_karyawan', $id)->first();
+        
+        // Log untuk debugging
+        Log::info("Upload Photo completed for karyawan {$id}", [
+            'uploaded_photos' => $uploadedPhotos,
+            'current_photos' => [
+                'foto_square' => $updatedKaryawan->foto_square,
+                'foto' => $updatedKaryawan->foto,
+                'foto_small' => $updatedKaryawan->foto_small
+            ]
+        ]);
+
+        // Generate URL untuk response
+        $photoUrls = [];
+        foreach ($photoTypes as $type => $config) {
+            if ($updatedKaryawan->{$type}) {
+                // Untuk disk hrd_files yang private, kita perlu route khusus untuk akses file
+                $photoUrls[$type] = route('photo.show', [
+                    'type' => $type,
+                    'id' => $id,
+                    'filename' => basename($updatedKaryawan->{$type})
+                ]);
+            } else {
+                $photoUrls[$type] = null;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto berhasil diupload.',
+            'photos' => $photoUrls
+        ]);
+    }
+
+    // Method helper untuk mendapatkan URL foto
+    public function getPhotoUrl($karyawan, $type)
+    {
+        if (!$karyawan->{$type}) {
+            return null;
+        }
+        
+        // Cek apakah foto menggunakan sistem lama
+        if (Str::startsWith($karyawan->{$type}, 'rsud_') || $karyawan->{$type} === 'user.png') {
+            return 'https://e-rsud.langsakota.go.id/hrd/user/images/profil/' . $karyawan->{$type};
+        }
+        
+        // Cek apakah foto ada di disk hrd_files
+        if (Storage::disk('hrd_files')->exists($karyawan->{$type})) {
+            return route('photo.show', [
+                'type' => $type,
+                'id' => $karyawan->kd_karyawan,
+                'filename' => basename($karyawan->{$type})
+            ]);
+        }
+        
+        // Fallback ke storage public jika ada
+        if (Storage::disk('public')->exists($karyawan->{$type})) {
+            return Storage::url($karyawan->{$type});
+        }
+        
+        return null;
+    }
+
+    // Method untuk menampilkan foto dari disk hrd_files
+    public function showPhoto($type, $id, $filename)
+    {
+        try {
+            $karyawan = Karyawan::where('kd_karyawan', $id)->firstOrFail();
+            
+            // Validasi apakah user berhak akses foto ini
+            // Tambahkan logic authorization sesuai kebutuhan
+            
+            $photoPath = 'photos/' . $filename;
+            
+            if (!Storage::disk('hrd_files')->exists($photoPath)) {
+                abort(404);
+            }
+            
+            $file = Storage::disk('hrd_files')->get($photoPath);
+            
+            // Determine MIME type based on file extension
+            $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            switch ($extension) {
+                case 'jpg':
+                case 'jpeg':
+                    $mimeType = 'image/jpeg';
+                    break;
+                case 'png':
+                    $mimeType = 'image/png';
+                    break;
+                case 'gif':
+                    $mimeType = 'image/gif';
+                    break;
+                default:
+                    $mimeType = 'application/octet-stream';
+            }
+            
+            return response($file, 200)
+                ->header('Content-Type', $mimeType)
+                ->header('Cache-Control', 'public, max-age=31536000'); // Cache 1 tahun
+                
+        } catch (\Exception $e) {
+            abort(404);
+        }
     }
 }

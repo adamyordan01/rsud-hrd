@@ -29,7 +29,7 @@ class MutasiVerifikasiController extends Controller
                 $join->on('vv.kd_mutasi', '=', 'hrm.kd_mutasi')
                      ->on('vv.kd_karyawan', '=', 'hrm.kd_karyawan');
             })
-            ->select('vv.*', 'hrm.id_dokumen')
+            ->select('vv.*', 'hrm.id_dokumen', 'hrm.path_dokumen')
             ->where('vv.kd_tahap_mutasi', 2)
             ->whereBetween('vv.tmt_jabatan', [$startDate, $endDate])
             ->orderBy('vv.kd_mutasi', 'desc')

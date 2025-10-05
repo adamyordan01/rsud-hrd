@@ -273,11 +273,8 @@ class MutasiOnProcessController extends Controller
                 </a>';
 
                 // Tombol download dokumen final jika sudah selesai TTE
-                if ($item->current_tahap_mutasi == 2 && !empty($item->path_dokumen)) {
-                    $aksi .= '<a href="' . route('admin.mutasi-on-process.download-document-by-path', [
-                        'kd_mutasi' => $item->kd_mutasi, 
-                        'kd_karyawan' => $item->kd_karyawan
-                    ]) . '" 
+                if ($item->current_tahap_mutasi == 2 && !empty($item->id_dokumen) && !empty($item->path_dokumen)) {
+                    $aksi .= '<a href="' . route('admin.mutasi-on-process.download-document', $item->id_dokumen) . '" 
                         class="btn btn-success btn-sm d-block mb-2" 
                         title="Download Dokumen Final">
                         <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
@@ -1092,31 +1089,23 @@ class MutasiOnProcessController extends Controller
                 'timeout' => 480,
             ]);
             
-            if ($response->getStatusCode() == 200) {
-                // Ambil content PDF yang sudah ditandatangani langsung dari response
-                $signedPdfContent = $response->getBody()->getContents();
-                
-                // Pastikan nama file selalu berekstensi PDF
-                $year = date('Y');
-                $filename = 'Nota_Tugas_Mutasi_Signed_' . $kd_mutasi . '_' . $kd_karyawan . '.pdf';
-                $directory = 'mutasi-documents/' . $year . '/signed';
-                $filePath = $directory . '/' . $filename;
-                
-                // Buat direktori jika belum ada
-                if (!Storage::disk('hrd_files')->exists($directory)) {
-                    Storage::disk('hrd_files')->makeDirectory($directory);
-                }
-                
-                // Simpan file dengan ekstensi PDF yang dipaksa
-                Storage::disk('hrd_files')->put($filePath, $signedPdfContent);
-                
-                // Update database dengan path dokumen final
+            // return response from headers
+            $headers = $response->getHeaders();
+            $id_dokumen = $headers['id_dokumen'][0];
+            
+            // if $headers['original']['code'] == 200 and id_dokumen is not empty
+            if ($response->getStatusCode() == 200 && !empty($id_dokumen)) {
+                // $this->updateVerification($kd_karyawan, $urut, $tahun, $id_dokumen);
+                // save id_dokumen to table hrd_r_mutasi
                 DB::table('hrd_r_mutasi')
                     ->where('kd_karyawan', $kd_karyawan)
                     ->where('kd_mutasi', $kd_mutasi)
                     ->update([
-                        'path_dokumen' => $filePath
+                        'id_dokumen' => $id_dokumen
                     ]);
+
+                // download the document
+                $this->downloadSignedDocument($id_dokumen);
 
                 return response()->json([
                     'code' => 200,
@@ -1127,10 +1116,12 @@ class MutasiOnProcessController extends Controller
                 return response()->json([
                     'code' => 500,
                     'status' => 'error',
-                    'message' => 'Proses TTE gagal. Status: ' . $response->getStatusCode(),
+                    'message' => 'Proses TTE gagal.' . $headers['original']['message'],
                 ], 500);
             }
         } catch (\Exception $e) {
+            // $this->serverError($kd_karyawan, $urut, $tahun);
+
             return response()->json([
                 'code' => 500,
                 'status' => 'error',
@@ -1139,46 +1130,45 @@ class MutasiOnProcessController extends Controller
         }
     }
 
-    // Method ini sudah tidak digunakan karena PDF langsung disimpan dari sendPdfForSignatures
-    // private function downloadSignedDocument($id_dokumen)
-    // {
-    //     $endpoint = "http://123.108.100.83:85/api/sign/download/" . $id_dokumen;
+    private function downloadSignedDocument($id_dokumen)
+    {
+        $endpoint = "http://123.108.100.83:85/api/sign/download/" . $id_dokumen;
 
-    //     $filename = 'Nota_Tugas_Mutasi_' . $id_dokumen . '.pdf';
-    //     $year = date('Y');
-    //     $directory = 'mutasi-documents/' . $year . '/signed';
-    //     $filePath = $directory . '/' . $filename;
+        $filename = 'Nota_Tugas_Mutasi_' . $id_dokumen . '.pdf';
+        $year = date('Y');
+        $directory = 'mutasi-documents/' . $year . '/signed';
+        $filePath = $directory . '/' . $filename;
 
-    //     // Pastikan direktori signed ada di hrd_files disk
-    //     if (!Storage::disk('hrd_files')->exists($directory)) {
-    //         Storage::disk('hrd_files')->makeDirectory($directory);
-    //     }
+        // Pastikan direktori signed ada di hrd_files disk
+        if (!Storage::disk('hrd_files')->exists($directory)) {
+            Storage::disk('hrd_files')->makeDirectory($directory);
+        }
 
-    //     // Download file dari server TTE
-    //     $client = new Client();
-    //     $response = $client->request('GET', $endpoint, [
-    //         'headers' => [
-    //             'Authorization' => 'Basic ZXNpZ246cXdlcnR5'
-    //         ]
-    //     ]);
+        // Download file dari server TTE
+        $client = new Client();
+        $response = $client->request('GET', $endpoint, [
+            'headers' => [
+                'Authorization' => 'Basic ZXNpZ246cXdlcnR5'
+            ]
+        ]);
 
-    //     // Simpan file yang sudah ditandatangani ke hrd_files disk
-    //     Storage::disk('hrd_files')->put($filePath, $response->getBody()->getContents());
+        // Simpan file yang sudah ditandatangani ke hrd_files disk
+        Storage::disk('hrd_files')->put($filePath, $response->getBody()->getContents());
 
-    //     // Update database dengan path baru
-    //     DB::table('hrd_r_mutasi')
-    //         ->where('id_dokumen', $id_dokumen)
-    //         ->update([
-    //             'path_dokumen' => $filePath
-    //         ])
-    //     ;
+        // Update database dengan path baru
+        DB::table('hrd_r_mutasi')
+            ->where('id_dokumen', $id_dokumen)
+            ->update([
+                'path_dokumen' => $filePath
+            ])
+        ;
 
-    //     return response()->json([
-    //         'code' => 200,
-    //         'status' => 'success',
-    //         'message' => 'File berhasil diunduh.'
-    //     ]);
-    // }
+        return response()->json([
+            'code' => 200,
+            'status' => 'success',
+            'message' => 'File berhasil diunduh.'
+        ]);
+    }
 
     private function generateQrCode($data, $path, $logo)
     {
@@ -1349,50 +1339,6 @@ class MutasiOnProcessController extends Controller
         sort($unique);
 
         print_r($unique);
-    }
-
-    /**
-     * Download dokumen mutasi nota yang sudah ditandatangani berdasarkan path
-     */
-    public function downloadMutasiDocumentByPath($kd_mutasi, $kd_karyawan)
-    {
-        try {
-            // Cari record berdasarkan kd_mutasi dan kd_karyawan
-            $mutasi = DB::table('hrd_r_mutasi')
-                ->where('kd_mutasi', $kd_mutasi)
-                ->where('kd_karyawan', $kd_karyawan)
-                ->whereNotNull('path_dokumen')
-                ->first();
-
-            if (!$mutasi) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Dokumen tidak ditemukan'
-                ], 404);
-            }
-
-            // Periksa apakah file ada di hrd_files disk
-            if (!Storage::disk('hrd_files')->exists($mutasi->path_dokumen)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'File dokumen tidak ditemukan'
-                ], 404);
-            }
-
-            // Return file untuk download
-            $fileContent = Storage::disk('hrd_files')->get($mutasi->path_dokumen);
-            $fileName = 'Nota_Tugas_Mutasi_' . $kd_mutasi . '_' . $kd_karyawan . '.pdf';
-            
-            return response($fileContent, 200)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
     }
 
     /**
