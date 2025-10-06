@@ -31,6 +31,40 @@ trait HasHrdRolesAndPermissions
     }
 
     /**
+     * Check if user has HRD permission based on active role only
+     *
+     * @param string $permission
+     * @return bool
+     */
+    public function hasActiveRolePermission(string $permission): bool
+    {
+        // Get active role from session
+        $activeRole = session('active_role');
+        
+        if (!$activeRole) {
+            return false;
+        }
+
+        // Check if user still has this active role
+        if (!$this->roles->contains('name', $activeRole)) {
+            return false;
+        }
+
+        // Add HRD prefix if not already present
+        $prefixedPermission = str_starts_with($permission, 'hrd_') ? $permission : 'hrd_' . $permission;
+        
+        // Find the specific role
+        $role = $this->roles->firstWhere('name', $activeRole);
+        
+        if (!$role) {
+            return false;
+        }
+
+        // Check if this specific role has the permission
+        return $role->permissions->contains('name', $prefixedPermission);
+    }
+
+    /**
      * Assign HRD role to user
      *
      * @param string $role

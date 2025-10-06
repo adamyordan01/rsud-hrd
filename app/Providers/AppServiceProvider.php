@@ -159,14 +159,51 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        // Directive untuk mengecek apakah user memiliki permission tertentu
+        // Directive untuk mengecek apakah user memiliki permission tertentu berdasarkan active role
         Blade::if('hasPermission', function ($permission) {
-            return auth()->check() && auth()->user()->hasPermissionTo($permission);
+            if (!auth()->check()) {
+                return false;
+            }
+            
+            // Get active role from session
+            $activeRole = session('active_role');
+            $user = auth()->user();
+            
+            if (!$activeRole) {
+                // Fallback: jika tidak ada active role, gunakan role pertama (untuk single role users)
+                if ($user->roles->count() === 1) {
+                    $activeRole = $user->roles->first()->name;
+                    session(['active_role' => $activeRole]);
+                } else {
+                    return false;
+                }
+            }
+
+            // Check if user still has this active role
+            if (!$user->roles->contains('name', $activeRole)) {
+                return false;
+            }
+
+            // Add HRD prefix if not already present
+            $prefixedPermission = str_starts_with($permission, 'hrd_') ? $permission : 'hrd_' . $permission;
+            
+            // Find the specific role
+            $role = $user->roles->firstWhere('name', $activeRole);
+            
+            if (!$role) {
+                return false;
+            }
+
+            // Check if this specific role has the permission
+            return $role->permissions->contains('name', $prefixedPermission);
         });
         
         // Directive untuk mengecek apakah user memiliki role tertentu
         Blade::if('hasRole', function ($role) {
-            return auth()->check() && auth()->user()->hasRole($role);
+            if (!auth()->check()) {
+                return false;
+            }
+            return auth()->user()->roles->contains('name', $role);
         });
     }
 }

@@ -45,10 +45,8 @@ class BladeServiceProvider extends ServiceProvider
         });
 
         // Directive untuk backward compatibility dengan permission lama
-        // Ini akan otomatis menambahkan prefix hrd_
-        Blade::directive('hasPermission', function ($permission) {
-            return "<?php if (Auth::check() && Auth::user()->hasHrdPermission({$permission})): ?>";
-        });
+        // Note: This is handled by AppServiceProvider's Blade::if directive
+        // Keep for consistency but it will use the Blade::if version
 
         Blade::directive('endhasPermission', function () {
             return '<?php endif; ?>';

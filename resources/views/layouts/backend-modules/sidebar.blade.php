@@ -426,6 +426,7 @@
                     </div>
 
                     {{-- menu untuk sk tanpa dropdown --}}
+                    @hasPermission('hrd_view_sk_karyawan')
                     <div class="menu-item">
                         <a
                             class="menu-link @if (request()->routeIs('admin.sk-kontrak.*')) active @endif"
@@ -441,8 +442,10 @@
                         </a>
                         <!--end:Menu link-->
                     </div>
+                    @endhasPermission
                 
                     <!-- check jika $jabatan saat login adalah 19 atau 7 atau 3 atau 1 maka arahkan ke menu ini -->
+                    @hasPermission('hrd_view_mutasi_karyawan')
                     @if ($jabatan == 19 || $jabatan == 7 || $jabatan == 3 || $jabatan == 1)
                         <div class="menu-item">
                             <a
@@ -504,6 +507,7 @@
                             </a>
                         </div>
                     @endif
+                    @endhasPermission
                 @endif
 
                 <!-- Export Menu -->
@@ -798,6 +802,7 @@
                     </div>
                 @endhasPermission
                 
+                @hasPermission('hrd_view_settings')
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.settings.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         {{-- <span class="menu-icon"><i class="ki-outline ki-gift fs-2"></i></span> --}}
@@ -899,6 +904,7 @@
                     </div>
                     <!--end:Menu sub-->
                 </div>
+                @endhasPermission
             </div>
             <!--end::Sidebar menu-->
         </div>

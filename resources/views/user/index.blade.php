@@ -91,7 +91,7 @@
                     <div class="d-flex flex-column" id="kt_modal_assign_role_scroll">
                         <div class="d-flex flex-column fv-row mb-8">
                             <label class="fs-6 fw-semibold mb-2">Pilih Role</label>
-                            <select name="roles[]" id="assign_roles" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih Role">
+                            <select name="roles[]" id="assign_roles" class="form-select form-select-solid" multiple data-control="select2" data-close-on-select="false" data-placeholder="Pilih Role">
                                 @foreach ($roles as $role)
                                     <option value="{{ $role->name }}">{{ $role->name }}</option>
                                 @endforeach

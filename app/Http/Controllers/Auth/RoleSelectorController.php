@@ -72,9 +72,12 @@ class RoleSelectorController extends Controller
             ], 403);
         }
 
+        // Set active role first
+        $destination = $this->setActiveRoleAndRedirect($selectedRole);
+        
         return response()->json([
             'success' => true,
-            'redirect' => $this->setActiveRoleAndRedirect($selectedRole)
+            'redirect' => $destination
         ]);
     }
 
@@ -101,6 +104,9 @@ class RoleSelectorController extends Controller
         // Set new active role
         Session::put('active_role', 'hrd_' . $newRole);
         Session::put('active_role_display', $this->getRoleDisplayName($newRole));
+        
+        // Force session save
+        Session::save();
 
         return response()->json([
             'success' => true,
@@ -114,12 +120,18 @@ class RoleSelectorController extends Controller
      */
     private function setActiveRoleAndRedirect($roleName)
     {
-        // Remove hrd_ prefix for clean role name
+        // Ensure consistent handling of role name
         $cleanRole = str_replace('hrd_', '', $roleName);
         
-        // Set active role in session
-        Session::put('active_role', $roleName);
+        // Always store with hrd_ prefix for consistency
+        $prefixedRole = str_starts_with($roleName, 'hrd_') ? $roleName : 'hrd_' . $roleName;
+        
+        // Set active role in session with prefix
+        Session::put('active_role', $prefixedRole);
         Session::put('active_role_display', $this->getRoleDisplayName($cleanRole));
+        
+        // Force session save untuk memastikan session tersimpan sebelum redirect
+        Session::save();
 
         // Determine redirect destination
         $destination = $this->getRoleDestination($cleanRole);
